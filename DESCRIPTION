@@ -1,0 +1,14 @@
+Package: exprsex
+Type: Package
+Title: Rank-Based Sex Labeling of Microarray Expression Data
+Version: 0.1.0
+Author: E Flynn
+Maintainer: erflynn@stanford.edu
+Description: 
+    Performs sex labeling of microarray expression datasets.
+    This package looks at the ranks of genes with consistent male- and female-specific expression.
+    The ranks are compared in order to sex label the data. 
+    This methods allows for robust sex-labeling across a wide range of platforms, and study sex breakdowns.
+License: Creative Commons License
+Encoding: UTF-8
+LazyData: true
