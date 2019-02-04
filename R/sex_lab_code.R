@@ -88,7 +88,6 @@ trainSexLab <- function(train_dat, train_lab, female_genes = NULL, male_genes = 
   # get rid of cut_frac
   require('pROC')
   # trains a model, saves it read in the reference female, male genes if not provided
-  load("data/sex_lab_genes.rda")
 
   if (is.null(female_genes)) {
     female_genes <- sex_lab_genes$f
@@ -180,15 +179,13 @@ predSexLab <- function(fit, expr_mat, numeric_lab = FALSE) {
 #' @param probe_map list mapping from probes to genes, names are probes, values are genes
 #' @param list_genes list of all genes to extract, if not provided will use default list
 #' @return rank_dat ranked dataset with rows as genes
-expDataToRanks <- function(probe_mat, probe_map, list_genes = NULL) {
+expDataToRanks <- function(probe_mat, probe_map, gene_list = list_genes) {
 
   # TODO
   #   should work if already genes
   #   decreasing or increasing?
-  if (is.null(list_genes)) {
-    load("R/sysdata.rda") #TODO - is this already loaded? if it is, does this create problems?
-  }
-  expr_mat <- convertToGenes(probe_mat, probe_map, list_genes)
+
+  expr_mat <- convertToGenes(probe_mat, probe_map, gene_list)
   rank_dat <- apply(expr_mat, 2, rank, na.last = "keep")
   return(rank_dat)
 }
