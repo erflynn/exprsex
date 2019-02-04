@@ -86,7 +86,7 @@ trainSexLab <- function(train_dat, train_lab, female_genes = NULL, male_genes = 
   # assert that label values are 1 or 0
   # assert that female_genes and male_genes are lists and their values are in the rownames
   # get rid of cut_frac
-
+  require('pROC')
   # trains a model, saves it read in the reference female, male genes if not provided
   load("data/sex_lab_genes.rda")
 
@@ -128,14 +128,14 @@ trainSexLab <- function(train_dat, train_lab, female_genes = NULL, male_genes = 
 predSexLab <- function(fit, expr_mat, numeric_lab = FALSE) {
   # TODO
   # assert correct formatting
-
+  require('pROC')
   # find the
   f_genes <- intersect(fit$f, rownames(expr_mat))
   m_genes <- intersect(fit$m, rownames(expr_mat))
   # TODO assert that there are some genes
 
   threshold_gpl <- fit$threshold
-  preds_test <- .geomMeanScore(test_dat, f_genes, m_genes) # calculate the score
+  preds_test <- .geomMeanScore(expr_mat, f_genes, m_genes) # calculate the score
   if (numeric_lab) {
     sex_lab <- ifelse(preds_test > threshold_gpl, 1, 0)
   } else {
@@ -206,22 +206,23 @@ expDataToRanks <- function(probe_mat, probe_map, list_genes = NULL) {
 .geomMeanScore <- function(expr_mat, female_genes, male_genes) {
   # TODO
   #  change so that the nomenclature for dat is always the same
+  require('psych')
   mean_m <- sapply(1:ncol(expr_mat), function(x) {
-    m_dat <- unlist(dat[male_genes, x])
+    m_dat <- unlist(expr_mat[male_genes, x])
     return(geometric.mean(m_dat, na.rm = TRUE))
   })
 
   mean_f <- sapply(1:ncol(expr_mat), function(x) {
-    f_dat <- unlist(dat[female_genes, x])
+    f_dat <- unlist(expr_mat[female_genes, x])
     return(geometric.mean(f_dat, na.rm = TRUE))
   })
   mean_diff <- mean_m - mean_f
   return(mean_diff)
 }
 
-#' Convert a MetaIntegrator object to an expression matrix with genes as rows.
+#' Convert an expression matrix with probes as rows to genes.
 #'
-#' Briefly, objects downloaded by MetaIntegrator contain an expression matrix and a list of
+#' Briefly, objects downloaded by MetaIntegrator or GEOquery contain an expression matrix and a list of
 #' key mapping from the matrix rows (probes) to genes. This function uses a list of genes
 #' and takes the average of the values of all probes pointing to a particular gene.
 #' If no probes map to that gene, the gene value is NA.
@@ -235,8 +236,8 @@ convertToGenes <- function(probe_mat, probe_map, list_genes){
   #  optimize, this is slow!! <-- possibly switch to MetaIntegrator function
   #  make sure the object contains expression data, keys
 
-  expData <- gse.obj$expr
-  keys <- gse.obj$keys
+  expData <- probe_mat
+  keys <- probe_map
   list.keys <- keys[keys %in% list_genes]
   key.df <- data.frame(list.keys, names(list.keys))
   colnames(key.df) <- c("gene", "probes")
@@ -262,7 +263,7 @@ convertToGenes <- function(probe_mat, probe_map, list_genes){
   expData2.2 <- data.frame(t(expData2)) # columns are samples, rows are genes
 
   # create a data fram of NAs for missing genes
-  missing.genes <- setdiff(gene.list, list.keys)
+  missing.genes <- setdiff(list_genes, list.keys)
   missing.vec <- rep(NA, ncol(expData2.2))
   missing.df <- do.call(rbind, lapply(1:length(missing.genes), function(x) missing.vec))
   rownames(missing.df) <- missing.genes
@@ -270,7 +271,7 @@ convertToGenes <- function(probe_mat, probe_map, list_genes){
 
   # put together and reorder
   expDataPlusMiss <- rbind(expData2.2, missing.df )
-  expr_mat <- expDataPlusMiss[gene.list,] # REORDER so it matches other data
+  expr_mat <- expDataPlusMiss[list_genes,] # REORDER so it matches other data
 
   return(expr_mat)
 }
