@@ -1,6 +1,5 @@
 
 
-# --------- Main functions --------- #
 
 #' Checks that an expression matrix has the correct format
 #'
@@ -26,11 +25,15 @@
 .checkFitObject <- function(fit){
   assertthat::has_name(fit, "f")
   assertthat::has_name(fit, "m")
-  assertthat::has_name(fit, "cutoff") #TODO check
-  assertthat::is.number(fit$cutoff)
+  assertthat::has_name(fit, "threshold") #TODO check
+  assertthat::is.number(fit$threshold)
   # TODO error messages
   # TODO check the format of the output
 }
+
+
+# --------- Main functions --------- #
+
 
 #' Run sex labeling using default settings.
 #'
@@ -84,28 +87,27 @@ trainSexLab <- function(train_dat, train_lab, female_genes = NULL, male_genes = 
   # assert that female_genes and male_genes are lists and their values are in the rownames
   # get rid of cut_frac
 
-  # trains a model, saves it read in the reference female, male genes if not provided -
-  # using ISEXs
+  # trains a model, saves it read in the reference female, male genes if not provided
+  load("data/sex_lab_genes.rda")
+
   if (is.null(female_genes)) {
-    female_genes <- read.csv("data/list_f_genes_i.csv", stringsAsFactors = FALSE)
-    female_genes <- female_genes[, 1]
+    female_genes <- sex_lab_genes$f
   }
   if (is.null(male_genes)) {
-    male_genes <- read.csv("data/list_m_genes_i.csv", stringsAsFactors = FALSE)
-    male_genes <- male_genes[, 1]
+    male_genes <- sex_lab_genes$m
   }
 
   # filter probes based on variance --> remove low variance probes
-  if (cut.frac == "Min.") {
+  if (cut_frac == "Min.") {
     m_genes <- male_genes
     f_genes <- female_genes
   } else {
-    m_genes <- .filterGenesByVar(train_dat, male_genes, cut.frac)
-    f_genes <- .filterGenesByVar(train_dat, female_genes, cut.frac)
+    m_genes <- .filterGenesByVar(train_dat, male_genes, cut_frac)
+    f_genes <- .filterGenesByVar(train_dat, female_genes, cut_frac)
   }
 
   # calculate scores for the training data
-  preds <- .geomMeanScore(train_dat, f.genes, m.genes)
+  preds <- .geomMeanScore(train_dat, f_genes, m_genes)
   preds2 <- preds[!is.nan(preds)]
   labels <- train_lab[colnames(train_dat)][!is.nan(preds)]
 
@@ -114,22 +116,22 @@ trainSexLab <- function(train_dat, train_lab, female_genes = NULL, male_genes = 
   threshold_gpl <- coords(roc_plot_train, "best", best.method = "closest.topleft", ret = c("threshold"))
 
   # fit object
-  return(list(f = f.genes, m = m.genes, threshold = threshold_gpl))
+  return(list(f = f_genes, m = m_genes, threshold = threshold_gpl))
 }
 
 #' Use a particular sex labeling fit to label an input dataset
 #' @param fit a sex labeling fit object
-#' @param test_dat data frame to label - rows are genes (HGNC_symbol), columns are samples, values are ranks
+#' @param expr_mat data frame to label - rows are genes (HGNC_symbol), columns are samples, values are ranks
 #' @param numeric_lab if TRUE output is numeric (0/1), otherwise it is ("female"/"male")
 #'
 #' @return sex_lab - a list of sex labels (0/1 or "female"/"male")
-predSexLab <- function(fit, test_dat, numeric_lab = FALSE) {
+predSexLab <- function(fit, expr_mat, numeric_lab = FALSE) {
   # TODO
   # assert correct formatting
 
   # find the
-  f_genes <- intersect(fit$f, rownames(test_dat))
-  m_genes <- intersect(fit$m, rownames(test_dat))
+  f_genes <- intersect(fit$f, rownames(expr_mat))
+  m_genes <- intersect(fit$m, rownames(expr_mat))
   # TODO assert that there are some genes
 
   threshold_gpl <- fit$threshold
@@ -170,25 +172,25 @@ predSexLab <- function(fit, test_dat, numeric_lab = FALSE) {
 
 #' Convert an expression dataset in probe form to ranks.
 #'
-#' Briefly, takes an MetaIntegrator object with an expression matrix (rows are probes),
-#' and converts the rows to genes, and then ranks each column, 1 to n (number of genes)
+#' Briefly, takes an expression matrix (rows are probes) and mapping to genes,
+#' and converts the matrix to genes, and then ranks each column, 1 to n (number of genes)
 #' in order of decreasing expression data. Missing data is ranked last.
 #'
-#' @param gse.obj meta integrator object
-#' @param list.genes list of all genes to extract, if not provided will use default list
-#' @return rank.dat ranked dataset with rows as genes
-expDataToRanks <- function(gse.obj, list.genes = NULL) {
-  # convert the expression data in a GSE object to ranks uses the list of genes as a the
-  # full set of genes
-  # TODO - this should work for both an expression dataset *AND* a meta integrator object
-  #   also this should really work for if it's not genes
+#' @param probe_mat an expression matrix with probes as rows and columns as samples
+#' @param probe_map list mapping from probes to genes, names are probes, values are genes
+#' @param list_genes list of all genes to extract, if not provided will use default list
+#' @return rank_dat ranked dataset with rows as genes
+expDataToRanks <- function(probe_mat, probe_map, list_genes = NULL) {
+
+  # TODO
+  #   should work if already genes
   #   decreasing or increasing?
-  if (is.null(list.genes)) {
-    list.genes <- read.csv("data/list_all_genes.csv")[, 1]
+  if (is.null(list_genes)) {
+    load("R/sysdata.rda") #TODO - is this already loaded? if it is, does this create problems?
   }
-  exp.genes <- convertToGenes(gse.obj, list.genes)
-  rank.dat <- apply(exp.genes, 2, rank, na.last = "keep")
-  return(rank.dat)
+  expr_mat <- convertToGenes(probe_mat, probe_map, list_genes)
+  rank_dat <- apply(expr_mat, 2, rank, na.last = "keep")
+  return(rank_dat)
 }
 
 #' Calculate the score geometric mean of male genes - female genes
@@ -196,20 +198,20 @@ expDataToRanks <- function(gse.obj, list.genes = NULL) {
 #' Relies on the psych package to calculate geometric means for each set of genes.
 #' The end result is a score for the difference in means which is used for classification.
 #'
-#' @param dat expression dataset: rows are genes, columns are samples
+#' @param expr_mat expression dataset: rows are genes, columns are samples
 #' @param female_genes list of genes with female-specific expression
 #' @param male_genes list of genes with male-specific expression
 #'
 #' @return the difference in means
-.geomMeanScore <- function(dat, female_genes, male_genes) {
+.geomMeanScore <- function(expr_mat, female_genes, male_genes) {
   # TODO
   #  change so that the nomenclature for dat is always the same
-  mean_m <- sapply(1:ncol(dat), function(x) {
+  mean_m <- sapply(1:ncol(expr_mat), function(x) {
     m_dat <- unlist(dat[male_genes, x])
     return(geometric.mean(m_dat, na.rm = TRUE))
   })
 
-  mean_f <- sapply(1:ncol(dat), function(x) {
+  mean_f <- sapply(1:ncol(expr_mat), function(x) {
     f_dat <- unlist(dat[female_genes, x])
     return(geometric.mean(f_dat, na.rm = TRUE))
   })
@@ -224,19 +226,18 @@ expDataToRanks <- function(gse.obj, list.genes = NULL) {
 #' and takes the average of the values of all probes pointing to a particular gene.
 #' If no probes map to that gene, the gene value is NA.
 #'
-#' @param gse.obj a MetaIntegrator object, contains an expr matrix and a list of keys
-#' @param gene.list list of genes for the rows
-#' @return exp_data - an expression matrix
-convertToGenes <- function(gse.obj, gene.list){
+#' @param probe_mat an expression matrix with probes as rows and columns as samples
+#' @param probe_map list mapping from probes to genes, names are probes, values are genes
+#' @param list_genes list of genes for the rows
+#' @return expr_mat - an expression matrix with probes as genes
+convertToGenes <- function(probe_mat, probe_map, list_genes){
   # TODO
   #  optimize, this is slow!! <-- possibly switch to MetaIntegrator function
   #  make sure the object contains expression data, keys
-  #  change so that this is INPUT expr matrix + key mapping
-  #  should work with both GEOQuery -AND- MetaIntegrator Objects
 
   expData <- gse.obj$expr
   keys <- gse.obj$keys
-  list.keys <- keys[keys %in% gene.list]
+  list.keys <- keys[keys %in% list_genes]
   key.df <- data.frame(list.keys, names(list.keys))
   colnames(key.df) <- c("gene", "probes")
   key.df$gene <- as.character(key.df$gene)
@@ -269,7 +270,7 @@ convertToGenes <- function(gse.obj, gene.list){
 
   # put together and reorder
   expDataPlusMiss <- rbind(expData2.2, missing.df )
-  expData2.3 <- expDataPlusMiss[gene.list,] # REORDER so it matches other data
+  expr_mat <- expDataPlusMiss[gene.list,] # REORDER so it matches other data
 
-  return(expData2.3)
+  return(expr_mat)
 }
