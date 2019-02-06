@@ -17,6 +17,7 @@ sex_lab_f <- predSexLab(fit_ex, exp_rank)
 print(sex_lab)
 
 
+
 ### with GEOquery
 require('GEOquery')
 gse2 <- getGEO("GSE55668")
@@ -32,7 +33,8 @@ map_list <- list("Female"=0, "Male"=1)
 
 sex_lab_reform <- unlist(sapply(sex_lab, function(x) map_list[[x]]))
 names(sex_lab_reform) <- colnames(expData)
-exp_rank2 <- expDataToRanks(expData, gene_symbol_list)
+
+exp_rank2 <- prepInput(expData, gene_symbol_list)
 fit_ex2 <- trainSexLab(exp_rank2, sex_lab_reform)
 sex_lab_f2 <- predSexLab(fit_ex2, exp_rank2)
 
