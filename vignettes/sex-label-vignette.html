@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="E Flynn" />
+
+<meta name="date" content="2019-03-20" />
+
+<title>Sex Labeling Example</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Sex Labeling Example</h1>
+<h4 class="author"><em>E Flynn</em></h4>
+<h4 class="date"><em>2019-03-20</em></h4>
+
+
+
+<div id="download-a-dataset-and-prepare-for-sex-labeling" class="section level2">
+<h2>Download a dataset and prepare for sex labeling</h2>
+<p>You can download the dataset with whatever method you prefer. In the end, you need a vector for gene-to-probe mapping and the expression matrix. ### Option 1: Download with MetaIntegrator</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(<span class="st">'MetaIntegrator'</span>)
+gse &lt;-<span class="st"> </span><span class="kw">getGEOData</span>(<span class="st">&quot;GSE55668&quot;</span>)</code></pre></div>
+<pre><code>##          Length Class  Mode
+## GSE55668 1      -none- list
+## [1] &quot;GSE55668_series_matrix.txt.gz&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># grab sex labels</span>
+sex_lab &lt;-<span class="st"> </span>gse<span class="op">$</span>originalData<span class="op">$</span>GSE55668<span class="op">$</span>pheno<span class="op">$</span><span class="st">`</span><span class="dt">Sex:ch1</span><span class="st">`</span>
+
+<span class="co"># View the expression matrix and some of the key mappings</span>
+<span class="kw">head</span>(gse<span class="op">$</span>originalData<span class="op">$</span>GSE55668<span class="op">$</span>expr[,<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>])</code></pre></div>
+<pre><code>##   GSM1341433 GSM1341434 GSM1341435 GSM1341436 GSM1341437
+## 1     -0.172    0.00517     -0.195     -0.308      -1.05
+## 2      0.000    0.00000      0.000      0.000       0.00
+## 3      0.000    0.00000      0.000      0.000       0.00
+## 4      0.000    0.00000      0.000      0.000       0.00
+## 5      0.000    0.00000      0.000      0.000       0.00
+## 6      0.000    0.00000      0.000      0.000       0.00</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(gse<span class="op">$</span>originalData<span class="op">$</span>GSE55668<span class="op">$</span>keys[<span class="op">!</span><span class="kw">is.na</span>(gse<span class="op">$</span>originalData<span class="op">$</span>GSE55668<span class="op">$</span>keys)]) </code></pre></div>
+<pre><code>##         12         14         16         18         19         22 
+## &quot;APOBEC3B&quot;   &quot;ATP11B&quot;   &quot;DNAJA1&quot;    &quot;EHMT2&quot;    &quot;RPL23&quot;    &quot;RPS13&quot;</code></pre>
+<p>The function <code>prepInput</code> is then used to summarize the probes to genes and convert to ranks.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">exp_rank &lt;-<span class="st"> </span><span class="kw">prepInput</span>(gse<span class="op">$</span>originalData<span class="op">$</span>GSE55668<span class="op">$</span>expr, gse<span class="op">$</span>originalData<span class="op">$</span>GSE55668<span class="op">$</span>keys)
+<span class="kw">head</span>(exp_rank[,<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>])</code></pre></div>
+<pre><code>##        GSM1341433 GSM1341434 GSM1341435 GSM1341436 GSM1341437
+## XIST         8836       8838       8838     8838.0     8838.0
+## EIF1AX       6987       8135       8278     8676.0     6345.0
+## EIF2S3       2611       5531       8022     7317.0     1869.5
+## KDM6A          NA         NA         NA         NA         NA
+## CD99         2198       2100       3503      922.5     1837.0
+## RPS4X        6566       7498       8677     8200.0     7374.5</code></pre>
+<div id="option-2-download-with-geoquery" class="section level3">
+<h3>Option 2: Download with GEOquery</h3>
+<p>When using GEOquery, a couple extra steps are required to grab the gene-to-probe mapping.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(<span class="st">'GEOquery'</span>)
+gse2 &lt;-<span class="st"> </span><span class="kw">getGEO</span>(<span class="st">&quot;GSE55668&quot;</span>)
+
+<span class="co"># Grab the expression matrix and feature information</span>
+expData &lt;-<span class="st"> </span><span class="kw">exprs</span>(gse2<span class="op">$</span>GSE55668_series_matrix.txt.gz)
+fData &lt;-<span class="st"> </span><span class="kw">fData</span>(gse2<span class="op">$</span>GSE55668_series_matrix.txt.gz)
+
+<span class="co"># grab the sex labels from the pheno data</span>
+sex_lab &lt;-<span class="st"> </span><span class="kw">pData</span>(gse2<span class="op">$</span>GSE55668_series_matrix.txt.gz)<span class="op">$</span><span class="st">`</span><span class="dt">Sex:ch1</span><span class="st">`</span>
+
+<span class="co"># Extract a gene-to-probe mapping vector from the feature (row) data</span>
+mapToGenes &lt;-<span class="st"> </span>fData[,<span class="kw">c</span>(<span class="st">&quot;ID&quot;</span>, <span class="st">&quot;GENE_SYMBOL&quot;</span>)]
+gene_symbol_list &lt;-<span class="st"> </span>mapToGenes<span class="op">$</span>GENE_SYMBOL
+<span class="kw">names</span>(gene_symbol_list) &lt;-<span class="st"> </span>mapToGenes<span class="op">$</span>ID
+<span class="kw">head</span>(gene_symbol_list[gene_symbol_list<span class="op">!=</span><span class="st">&quot;&quot;</span>])</code></pre></div>
+<pre><code>##             12             14             15             16             18 
+##     &quot;APOBEC3B&quot;       &quot;ATP11B&quot; &quot;LOC100132006&quot;       &quot;DNAJA1&quot;        &quot;EHMT2&quot; 
+##             19 
+##        &quot;RPL23&quot;</code></pre>
+<p>We run <code>prepInput</code> in a similar way using the key vector we created.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">exp_rank &lt;-<span class="st"> </span><span class="kw">prepInput</span>(expData, gene_symbol_list)</code></pre></div>
+</div>
+</div>
+<div id="reformat-sex-labels" class="section level2">
+<h2>Reformat sex labels</h2>
+<p>The sex labels in the study are present as Female/Male - we want them as 0 (f) and 1 (m), so they must be mapped. The end result is a vector with sex labels and the names of the vector are the sample IDs.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(sex_lab)</code></pre></div>
+<pre><code>## [1] &quot;Female&quot; &quot;Female&quot; &quot;Female&quot; &quot;Female&quot; &quot;Female&quot; &quot;Female&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">map_list &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="st">&quot;Female&quot;</span>=<span class="dv">0</span>, <span class="st">&quot;Male&quot;</span>=<span class="dv">1</span>)
+sex_lab_reform &lt;-<span class="st"> </span><span class="kw">unlist</span>(<span class="kw">sapply</span>(sex_lab, <span class="cf">function</span>(x) map_list[[x]]))
+<span class="kw">names</span>(sex_lab_reform) &lt;-<span class="st"> </span><span class="kw">colnames</span>(exp_rank)
+<span class="kw">head</span>(sex_lab_reform)</code></pre></div>
+<pre><code>## GSM1341433 GSM1341434 GSM1341435 GSM1341436 GSM1341437 GSM1341438 
+##          0          0          0          0          0          0</code></pre>
+</div>
+<div id="train-a-model-using-the-provided-data-and-models" class="section level2">
+<h2>Train a model using the provided data and models</h2>
+<p>Fits include a sex of female-specific genes, male-specific genes, and a cutoff threshold. The <code>trainSexLab</code> function uses the training data and labels to remove low-variance genes from a</p>
+<pre><code>## List of 3
+##  $ f        : chr [1:16] &quot;XIST&quot; &quot;RPS4X&quot; &quot;AMMECR1&quot; &quot;CD40LG&quot; ...
+##  $ m        : chr [1:8] &quot;RPS4Y1&quot; &quot;EIF1AY&quot; &quot;USP9Y&quot; &quot;DDX3Y&quot; ...
+##  $ threshold: num 742</code></pre>
+</div>
+<div id="predict-sex-labels-using-an-existing-fit" class="section level2">
+<h2>Predict sex labels using an existing fit</h2>
+<p>Use a general t and run sex labeling.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">data</span>(fit_all_train)
+<span class="co"># load and view a fit</span>
+<span class="kw">str</span>(fit_all_train)</code></pre></div>
+<pre><code>## List of 3
+##  $ f        : chr [1:18] &quot;XIST&quot; &quot;AMMECR1&quot; &quot;CD40LG&quot; &quot;ZRSR2&quot; ...
+##  $ m        : chr [1:8] &quot;RPS4Y1&quot; &quot;EIF1AY&quot; &quot;USP9Y&quot; &quot;ZBED1&quot; ...
+##  $ threshold: num -363</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># predict using existing fit</span>
+sex_lab_f &lt;-<span class="st"> </span><span class="kw">predSexLab</span>(fit_all_train, exp_rank)
+<span class="kw">head</span>(sex_lab_f)</code></pre></div>
+<pre><code>## GSM1341433 GSM1341434 GSM1341435 GSM1341436 GSM1341437 GSM1341438 
+##          0          0          0          0          0          0</code></pre>
+<p>Compare to the sex labels from the trained fit and the actual sex labels.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># predict using the new fit (warning: this fit was trained on the data!)</span>
+sex_lab_t &lt;-<span class="st"> </span><span class="kw">predSexLab</span>(fit_ex, exp_rank)
+<span class="kw">table</span>(sex_lab_f<span class="op">==</span>sex_lab_reform)</code></pre></div>
+<pre><code>## 
+## TRUE 
+##   14</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">table</span>(sex_lab_t<span class="op">==</span>sex_lab_reform)</code></pre></div>
+<pre><code>## 
+## TRUE 
+##   14</code></pre>
+</div>
+<div id="visualize-the-sex-labels" class="section level2">
+<h2>Visualize the sex labels</h2>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># here we are grabbing the predicted sex labels</span>
+<span class="kw">visualizeXYplot</span>(expData, gene_symbol_list, sex_lab_f)</code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
