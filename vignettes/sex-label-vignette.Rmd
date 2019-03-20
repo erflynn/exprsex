@@ -1,0 +1,112 @@
+---
+title: "Sex Labeling Example"
+author: "E Flynn"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, echo=FALSE, message=FALSE}
+require('exprsex')
+```
+
+
+
+## Download a dataset and prepare for sex labeling
+You can download the dataset with whatever method you prefer. In the end, you need a vector for gene-to-probe mapping and the expression matrix.
+### Option 1: Download with MetaIntegrator
+```{r, warning=FALSE, message=FALSE}
+require('MetaIntegrator')
+gse <- getGEOData("GSE55668")
+
+# grab sex labels
+sex_lab <- gse$originalData$GSE55668$pheno$`Sex:ch1`
+
+# View the expression matrix and some of the key mappings
+head(gse$originalData$GSE55668$expr[,1:5])
+head(gse$originalData$GSE55668$keys[!is.na(gse$originalData$GSE55668$keys)]) 
+```
+
+The function `prepInput` is then used to summarize the probes to genes and convert to ranks.
+```{r}
+exp_rank <- prepInput(gse$originalData$GSE55668$expr, gse$originalData$GSE55668$keys)
+head(exp_rank[,1:5])
+```
+
+### Option 2: Download with GEOquery
+When using GEOquery, a couple extra steps are required to grab the gene-to-probe mapping.
+```{r, warning=FALSE, message=FALSE}
+require('GEOquery')
+gse2 <- getGEO("GSE55668")
+
+# Grab the expression matrix and feature information
+expData <- exprs(gse2$GSE55668_series_matrix.txt.gz)
+fData <- fData(gse2$GSE55668_series_matrix.txt.gz)
+
+# grab the sex labels from the pheno data
+sex_lab <- pData(gse2$GSE55668_series_matrix.txt.gz)$`Sex:ch1`
+
+# Extract a gene-to-probe mapping vector from the feature (row) data
+mapToGenes <- fData[,c("ID", "GENE_SYMBOL")]
+gene_symbol_list <- mapToGenes$GENE_SYMBOL
+names(gene_symbol_list) <- mapToGenes$ID
+head(gene_symbol_list[gene_symbol_list!=""])
+```
+
+We run `prepInput` in a similar way using the key vector we created.
+```{r}
+exp_rank <- prepInput(expData, gene_symbol_list)
+```
+
+## Reformat sex labels
+The sex labels in the study are present as Female/Male - we want them as 0 (f) and 1 (m), so they must be mapped.
+The end result is a vector with sex labels and the names of the vector are the sample IDs.
+```{r}
+head(sex_lab)
+map_list <- list("Female"=0, "Male"=1)
+sex_lab_reform <- unlist(sapply(sex_lab, function(x) map_list[[x]]))
+names(sex_lab_reform) <- colnames(exp_rank)
+head(sex_lab_reform)
+```
+
+## Train a model using the provided data and models
+Fits include a sex of female-specific genes, male-specific genes, and a cutoff threshold. 
+The `trainSexLab` function uses the training data and labels to remove low-variance genes from a 
+```{r, echo=FALSE, message=FALSE}
+fit_ex <- trainSexLab(exp_rank, sex_lab_reform)
+
+# take a look at the fit
+str(fit_ex)
+```
+
+## Predict sex labels using an existing fit
+Use a general t and run sex labeling.
+```{r}
+data(fit_all_train)
+# load and view a fit
+str(fit_all_train)
+
+# predict using existing fit
+sex_lab_f <- predSexLab(fit_all_train, exp_rank)
+head(sex_lab_f)
+```
+
+Compare to the sex labels from the trained fit and the actual sex labels.
+```{r}
+# predict using the new fit (warning: this fit was trained on the data!)
+sex_lab_t <- predSexLab(fit_ex, exp_rank)
+table(sex_lab_f==sex_lab_reform)
+table(sex_lab_t==sex_lab_reform)
+```
+
+
+## Visualize the sex labels
+```{r, message=FALSE, warning=FALSE}
+# here we are grabbing the predicted sex labels
+visualizeXYplot(expData, gene_symbol_list, sex_lab_f)
+```
+
+

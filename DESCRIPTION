@@ -13,8 +13,13 @@ License: Creative Commons License
 Encoding: UTF-8
 LazyData: true
 Imports: 
+    dplyr, 
     pROC,
     psych
 Suggests: 
-    MetaIntegrator
+    MetaIntegrator,
+    GEOquery,
+    knitr,
+    rmarkdown
 RoxygenNote: 6.1.1
+VignetteBuilder: knitr
