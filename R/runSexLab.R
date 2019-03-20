@@ -9,7 +9,7 @@ runSexLab <- function(expr_mat, platform=NULL, is_rank=FALSE, numeric_lab=TRUE){
   # TODO
   #   assert that input is correct
   #   assert that the ranked data is actually ranked if it says it is
-
+  error("This function is not implemented yet, please use predSexLab instead")
   # if it is not ranked, ranked the data
   if (!is_rank){
 

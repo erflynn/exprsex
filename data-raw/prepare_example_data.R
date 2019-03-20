@@ -4,7 +4,7 @@
 ### with MetaIntegrator
 require('MetaIntegrator')
 gse <- getGEOData("GSE55668")
-exp_rank <- expDataToRanks(gse$originalData$GSE55668)
+exp_rank <- prepInput(gse$originalData$GSE55668$expr, gse$originalData$GSE55668$keys)
 sex_lab <- gse$originalData$GSE55668$pheno$`Sex:ch1`
 map_list <- list("Female"=0, "Male"=1)
 key_mapping <- gse$originalData$GSE55668$keys

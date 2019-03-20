@@ -16,12 +16,15 @@
 
 #' Checks that an input expression matrix has the correct format
 #'
-#' Makes sure the object is a data.frame or matrix, and the values in it are numeric.
+#' Makes sure the object is a matrix, and the values in it are numeric.
 #'
 #' @param expr_mat the expression matrix
 .checkExprMatFormat <- function(expr_mat){
+  .my_assert("the expr_mat must be a matrix", class(expr_mat)=="matrix")
+  # print an error if it is a data frame
   .my_assert("the expr_mat must contain only numeric values", is.numeric(expr_mat))
-  .my_assert("the expr_mat must be a matrix or data frame", class(expr_mat) %in% c("matrix", "data.frame"))
+  # TODO
+  #   update to work for a data frame, which is.numeric will not evaluate to TRUE
 }
 
 
