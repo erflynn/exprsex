@@ -1,5 +1,5 @@
 # exprsex
-## E Flynn
+## E Flynn and Annie Chang
 R package for sex labeling expression data. Still beta version.
 
 To run:
