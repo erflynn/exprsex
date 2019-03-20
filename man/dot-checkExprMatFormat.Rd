@@ -10,5 +10,5 @@
 \item{expr_mat}{the expression matrix}
 }
 \description{
-Makes sure the object is a data.frame or matrix, and the values in it are numeric.
+Makes sure the object is a matrix, and the values in it are numeric.
 }

@@ -38,3 +38,14 @@ exp_rank2 <- prepInput(expData, gene_symbol_list)
 fit_ex2 <- trainSexLab(exp_rank2, sex_lab_reform)
 sex_lab_f2 <- predSexLab(fit_ex2, exp_rank2)
 
+
+### visualization example
+gse <- getGEOData("GSE23394")
+expr_matrix <- gse$originalData$GSE23394$expr
+keys <- gse$originalData$GSE23394$keys
+# get ranked data of all genes in samples
+rank_data <- prepInput(expr_matrix, keys)
+load("data/fits/fit_all_train.RData")
+sex_lab <- predSexLab(fit, rank_data) # here we are grabbing the predicted sex labels
+# run visualization
+visualizeXYplot(expr_matrix, keys, sex_lab)

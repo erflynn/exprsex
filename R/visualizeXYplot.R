@@ -1,48 +1,14 @@
-```{r}
-# find 3 mixed sex studies to run (that i've looked at before) and 1-2 single sex with < 30 samples
-# mixed sex: 
-# single sex: GSE54238, GSE53791
-# random one picked up from CREEDS: GSE52889
 
-#' This function graphs the XIST vs. RPS4Y1 probes for a given study.
-
-# Download necessary packages
-library('exprsex')
-require('MetaIntegrator')
-require('GEOquery')
-require('tidyverse')
-gse <- getGEOData("GSE23394")
-# single sex: gse <- getGEOData("GSE54238")
-gse <- getGEO("GSE1563")
-
-require('miceadds')
-require('psych')
-require('pROC')
-require('exprsex')
-
-load.Rdata("/Users/anniechang/Desktop/Research/fit_all_train.RData", 'fit')
-expr_matrix <- gse$originalData$GSE23394$expr
-keys <- gse$originalData$GSE23394$keys
-gene_list <- read.csv("/Users/anniechang/Desktop/Research/list_all_genes.csv")[,1]
-
-# get ranked data of all genes in samples
-rank_data <- prepInput(expr_matrix, keys, gene_list)
-
-# obtain the sex labels from predSexLab function in exprsex package
-sex_lab <- exprsex::predSexLab(fit, rank_data)
-sex_lab <- as.data.frame(sex_lab)
-sex_lab$sex_lab <- "0"
-
+#'This function graphs the XIST vs. RPS4Y1 probes for a given study.
 #'
 #' @param expr_matrix expression data matrix - rows are genes, columns are samples
 #' @param keys mapping between genes and probes
 #' @param sex_lab sex labels (0 - female, 1 - male) for each of the samples
 #'
-#' @return visualizePlots - a graph of RPS4Y1 vs. XIST probes corresponding to the sex labels of studies 
+#' @return a graph of RPS4Y1 vs. XIST probes corresponding to the sex labels of studies
 
-visualizePlots <- function (expr_matrix, keys, sex_lab, x_axis = "XIST", y_axis = "RPS4Y1") {
-  # TODO
-  #   obtain XIST values from expression data
+visualizeXYplot <- function (expr_matrix, keys, sex_lab, x_axis = "XIST", y_axis = "RPS4Y1") {
+
   keys <- as.data.frame(keys)
   keys$probe <- rownames(keys)
   names(keys) <- c("gene", "probe")
@@ -53,11 +19,11 @@ visualizePlots <- function (expr_matrix, keys, sex_lab, x_axis = "XIST", y_axis 
     xist.vals$samp_ids <- names(expr_matrix[xist.probes$probe, ])
     colnames(xist.vals)[ncol(xist.vals)] <- "samp_ids"
   }
-  
+
   else {
     return("Error: XIST gene missing.")
   }
-  
+
   #   obtain RPS4Y1 values from expression data
   if ('RPS4Y1' %in% keys$gene) {
     rps4y1.probes <- filter(keys, gene == "RPS4Y1")
@@ -65,11 +31,11 @@ visualizePlots <- function (expr_matrix, keys, sex_lab, x_axis = "XIST", y_axis 
     rps4y1.vals$samp_ids <- names(expr_matrix[rps4y1.probes$probe, ])
     colnames(rps4y1.vals) <- c(rps4y1.probes$probe, "samp_ids")
   }
-  
+
     else {
     return("Error: RPS4Y1 gene missing.")
   }
-  
+
   #   plot the ranked XIST and RPS4Y1 data
   xy_vals <- rank_data[c('XIST', 'RPS4Y1'),]
   sex_lab <- as.data.frame(sex_lab)
