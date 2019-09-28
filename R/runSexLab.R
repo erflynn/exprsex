@@ -72,7 +72,7 @@ trainSexLab <- function(train_dat, train_lab, female_genes = NULL, male_genes = 
 
   # compute the threshold
   roc_plot_train <- roc(labels, preds2, plot = FALSE)
-  threshold_gpl <- coords(roc_plot_train, "best", best.method = "closest.topleft", ret = c("threshold"))
+  threshold_gpl <- coords(roc_plot_train, "best", best.method = "closest.topleft", ret = c("threshold"), transpose=TRUE)
 
   # fit object
   return(list(f = f_genes, m = m_genes, threshold = threshold_gpl))

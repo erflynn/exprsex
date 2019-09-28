@@ -9,6 +9,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+
+
 ```{r, echo=FALSE, message=FALSE}
 require('exprsex')
 ```
@@ -37,29 +39,23 @@ head(exp_rank[,1:5])
 ```
 
 ### Option 2: Download with GEOquery
-When using GEOquery, a couple extra steps are required to grab the gene-to-probe mapping.
+When using GEOquery, we just have to run `createGSEObj` to convert the data.
 ```{r, warning=FALSE, message=FALSE}
 require('GEOquery')
 gse2 <- getGEO("GSE55668")
 
-# Grab the expression matrix and feature information
-expData <- exprs(gse2$GSE55668_series_matrix.txt.gz)
-fData <- fData(gse2$GSE55668_series_matrix.txt.gz)
+gse.obj2 <- createGSEObj(gse2)
+gse.obj2$sex_lab <- pData(gse2$GSE55668_series_matrix.txt.gz)$`Sex:ch1`
 
-# grab the sex labels from the pheno data
-sex_lab <- pData(gse2$GSE55668_series_matrix.txt.gz)$`Sex:ch1`
-
-# Extract a gene-to-probe mapping vector from the feature (row) data
-mapToGenes <- fData[,c("ID", "GENE_SYMBOL")]
-gene_symbol_list <- mapToGenes$GENE_SYMBOL
-names(gene_symbol_list) <- mapToGenes$ID
-head(gene_symbol_list[gene_symbol_list!=""])
 ```
 
-We run `prepInput` in a similar way using the key vector we created.
+The next steps are all the same:
 ```{r}
-exp_rank <- prepInput(expData, gene_symbol_list)
+gse.obj2 <- prepInput(gse.obj2) # list_genes?
+fit_g2 <- trainSexLab(gse.obj2$rank, gse.obj2$sex_lab)
+fit_g3predSexLab(fit_g2, gse.obj2$rank)
 ```
+
 
 ## Reformat sex labels
 The sex labels in the study are present as Female/Male - we want them as 0 (f) and 1 (m), so they must be mapped.
