@@ -16,9 +16,10 @@ Imports:
     dplyr, 
     pROC,
     psych,
-    MetaIntegrator,
+    MetaIntegrator (>= 2.1.1),
     GEOquery,
-    tidyr
+    tidyr,
+    stringr
 Suggests: 
     knitr,
     rmarkdown
