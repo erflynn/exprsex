@@ -47,6 +47,7 @@ setPlatformDir <- function(platform_dir=NULL){
   gene <- gene_parse$keys
   gene <- gene[!is.na(gene)]
   if (length(gene) < 100){
+    print("re-extracting probe mapping with alternate parsing")
     gene <- .parseGenesAlt(fData)
     gene <- gene[!is.na(gene)]
   }
@@ -65,9 +66,30 @@ setPlatformDir <- function(platform_dir=NULL){
     return(.parseKeysFromFData(fData))
   }, error = function(err){
     print(sprintf("error loading %s", gpl.name))
-    return(data.frame("gene"=character()))
+    return(list())
   })
 }
+
+
+#' Reformat keys into a data frame
+#'
+#' @param keys list with probe to gene mapping
+#' @return gene dataframe with columns gene and probes
+.getGeneDf <- function(keys){
+  if (length(keys)==0){
+    print("error - no keys available")
+    return(data.frame("gene"=character()))
+  }
+  key.df <- data.frame(keys, names(keys))
+  colnames(key.df) <- c("gene", "probes")
+  key.df2 <- key.df %>%
+    mutate(gene = as.character(gene),
+           probes = as.character(probes)) %>%
+    separate_rows(gene, sep=",")  %>%
+    mutate(gene=str_trim(gene))
+  return(key.df2)
+}
+
 
 #' Take a list with probe to gene mapping and formate it as gene to probe mapping
 #'  In the process, separate out to allow for multi-mapping
@@ -75,14 +97,8 @@ setPlatformDir <- function(platform_dir=NULL){
 #' @param keys list with probe to gene mapping
 #' @return list with gene to probe mapping, genes are names, probes
 .formatGeneProbe <- function(keys){
-  key.df <- data.frame(keys, names(keys))
-  colnames(key.df) <- c("gene", "probes")
-  key_df2 <- key_df %>%
-    mutate(gene = as.character(gene),
-           probes = as.character(probes)) %>%
-    separate_rows(gene, sep=",")  %>%
-    mutate(gene=str_trim(gene)) %>%
-  gene.to.probe <- split(key.df2$probes,  key.df2$gene)
+  key.df <- .getGeneDf(keys)
+  gene.to.probe <- split(key.df$probes,  key.df$gene)
   return(gene.to.probe)
 }
 

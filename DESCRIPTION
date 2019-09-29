@@ -15,10 +15,11 @@ LazyData: true
 Imports: 
     dplyr, 
     pROC,
-    psych
-Suggests: 
+    psych,
     MetaIntegrator,
     GEOquery,
+    tidyr
+Suggests: 
     knitr,
     rmarkdown
 RoxygenNote: 6.1.1
