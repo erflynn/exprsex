@@ -1,7 +1,4 @@
 
-#'
-
-
 #' Convert an expression dataset to ranks.
 #'
 #' Briefly, takes an expression matrix, and then ranks each column, 1 to n (number of genes)
@@ -16,36 +13,15 @@
 }
 
 
-
-#' Function to parse genes from fData
-#' Can be used directly if we have output from GEOquery
-#'
-#' @param fData feature/probe data table
-#' @return list of genes with names as probes
-.parseKeysFromFData <- function(fData){
-  require("MetaIntegrator")
-  gene_parse <- MetaIntegrator:::.GEO_fData_key_parser(fData)
-  gene <- gene_parse$keys
-  gene <- gene[!is.na(gene)]
-  if (length(gene) < 100){
-    print("re-extracting probe mapping with alternate parsing")
-    gene <- .parseGenesAlt(fData)
-    gene <- gene[!is.na(gene)]
-  }
-  return(gene)
-}
-
 #' Get the list of genes for a GPL
 #'
-#' @param gpl.name
-#' @return list of genes with names as probes
-.getGenes <- function(gpl.name){
-  require('GEOquery')
+#' @param gpl.name the name of the platform
+#' @param ref_dir option to set reference directory  (defaults to tempdir)
+#' @return probe/gene data frame
+.getGenes <- function(gpl.name, ref_dir=NULL){
   print(sprintf("Extracting genes from %s", gpl.name))
   tryCatch({
-    gpl.obj <- getGEO(gpl.name, AnnotGPL=TRUE)
-    fData <- gpl.obj@dataTable@table
-    return(.parseKeysFromFData(fData))
+    return(parse_entrez_from_gpl(gpl.name, ref_dir))
   }, error = function(err){
     print(sprintf("error loading %s", gpl.name))
     return(list())
@@ -53,36 +29,14 @@
 }
 
 
-#' Reformat keys into a data frame
-#'
-#' @param keys list with probe to gene mapping
-#' @return gene dataframe with columns gene and probes
-.getGeneDf <- function(keys){
-  require('dplyr')
-  require('tidyr')
-  require('stringr')
-  if (length(keys)==0){
-    print("error - no keys available")
-    return(data.frame("gene"=character()))
-  }
-  key.df <- data.frame(keys, names(keys))
-  colnames(key.df) <- c("gene", "probes")
-  key.df2 <- key.df %>%
-    mutate(gene = as.character(gene),
-           probes = as.character(probes)) %>%
-    separate_rows(gene, sep=",")  %>%
-    mutate(gene=str_trim(gene))
-  return(key.df2)
-}
 
 
 #' Take a list with probe to gene mapping and formate it as gene to probe mapping
 #'  In the process, separate out to allow for multi-mapping
 #'
-#' @param keys list with probe to gene mapping
+#' @param key.df a data frame with probe/gene mapping
 #' @return list with gene to probe mapping, genes are names, probes
-.formatGeneProbe <- function(keys){
-  key.df <- .getGeneDf(keys)
+.formatGeneProbe <- function(key.df){
   gene.to.probe <- split(key.df$probes,  key.df$gene)
   return(gene.to.probe)
 }
@@ -93,9 +47,10 @@
 #'
 #' @param platform the platform to download
 #' @param gse_keys the keys from the gse_obj
-#' @param platform_dir option to set platform  (defaults to tempdir)
+#' @param platform_dir option to set platform dir  (defaults to tempdir)
+#' @param ref_dir option to set reference directory  (defaults to tempdir)
 #' @return gene.to.probe a mapping from genes to probes
-.getGeneToProbe <- function(platform, gse_keys=NULL, platform_dir=NULL){
+.getGeneToProbe <- function(platform, gse_keys=NULL, platform_dir=NULL, ref_dir=NULL){
   require('miceadds')
   if (is.null(platform_dir)){
     platform_dir <- tempdir()
@@ -108,7 +63,7 @@
     # extract the keys and then convert it to a table
     keys <- gse_keys
     if (is.null(gse_keys) | (length(keys[!is.na(keys)]) < 100)){
-      keys <- .getGenes(platform)
+      keys <- .getGenes(platform, ref_dir)
     }
     gene.to.probe <- .formatGeneProbe(keys)
     save(gene.to.probe, file=platform.path)
@@ -124,7 +79,7 @@
 #' and takes the average of the values of all probes pointing to a particular gene.
 #' If no probes map to that gene, the gene value is NA.
 #'
-#' @param gse.obj
+#' @param gse.obj the gene object
 #' @param gene_list list of genes for the rows
 #' @return expr_mat - an expression matrix with probes as genes
 .convertToGenes <- function(gse.obj, gene_list){
@@ -168,4 +123,3 @@
   expr_mat <- expDataPlusMiss[gene_list,] # REORDER so it matches other data
   return(expr_mat)
 }
-

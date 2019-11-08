@@ -2,20 +2,20 @@
 % Please edit documentation in R/prepInput.R
 \name{prepInput}
 \alias{prepInput}
-\title{Prepare the input data for sex labeling.}
+\title{Prepare the input data for sex labeling by converting it to genes
+and getting the ranks.}
 \usage{
-prepInput(probe_mat, probe_map, gene_list = list_genes)
+prepInput(gse.obj, gene_list = list_genes)
 }
 \arguments{
-\item{probe_mat}{an expression matrix with probes as rows and columns as samples}
+\item{gse.obj}{the object}
 
-\item{probe_map}{list mapping from probes to genes, names are probes, values are genes}
-
-\item{gene_list}{list of all genes to extract, if not provided will use default list}
+\item{gene_list}{the list of genes to use}
 }
 \value{
-rank_dat ranked dataset with rows as genes
+the gse.obj prepared for sex labeling
 }
 \description{
-Briefly, takes an expression matrix with rows
+Prepare the input data for sex labeling by converting it to genes
+and getting the ranks.
 }

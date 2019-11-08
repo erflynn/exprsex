@@ -1,0 +1,184 @@
+
+#' Load the desired reference data mapping table.
+#' The reference tables are used later for mapping gpl data to entrez ids.
+#' This first checks if the mapping exists in the ref_dir and then if not,
+#' calls a helper function to extract it.
+#'
+#' @param organism the organism to grab data for: rat, mouse, or human
+#' @param type type of data desired - one of "ensembl", "refseq", "hgnc", "unigene", "genbank", or "entrezids"
+#' @param ref_dir option to set reference directory  (defaults to tempdir)
+#' @param save_dat whether to save the data in the reference directory, defaults to TRUE
+#' @return the desired mapping data
+.load_ref <- function(organism, type, ref_dir=NULL, save_dat=TRUE){
+  if (is.null(ref_dir)){
+    ref_dir <- tempdir()
+  }
+  if (type %in% c("ensembl", "refseq", "hgnc")){
+    type <- "gene_map"
+  }
+  # checks first for the data - if it exists, load it
+  dat.path <- sprintf("%s/%s_%s.RData", ref_dir, organism, type)
+  if (file.exists(dat.path)){
+    load.RData(dat.path, "ref_dat")
+    return(ref_dat)
+  } else {
+    # if the data does not exist - generate it and save it in the ref_dir
+    ref_dat <- .get_ref_data(organism, type, ref_dir)
+    if (save_dat){
+      save(ref_dat, file=dat.path)
+    }
+    return(ref_dat)
+  }
+}
+
+#' Generate the desired mapping data for that organism
+#'
+#' @param organism the organism to grab data for: rat, mouse, or human
+#' @param type type of data desired
+#' @param ref_dir the reference directory to pull from, this is either provided or a tempdir
+#' @return the desired mapping data
+.get_ref_data <- function(organism, type, ref_dir){
+  ref_dat <- case_when(
+    type == "gene_map" ~ .extract_biomart_ref(organism),
+    type == "entrezids" ~ .extract_entrez(organism, ref_dir),
+    type == "genbank" ~ .get_genbank(organism),
+    type == "unigene" ~ .get_unigene(organism, ref_dir),
+    type == "xy_genes" ~ .get_xy_genes(organism, ref_dir)
+    )
+  return(ref_dat)
+}
+
+
+#' Gets a mapping of unigene ids to entrez ids.
+#' This pulls the list from the entrezids, which is either in the ref_dir or is generated.
+#'
+#' @param organism the organism to grab data for: rat, mouse, or human
+#' @param ref_dir the reference directory to pull from, this is either provided or a tempdir
+#' @return table with unigene and entrez ids
+.get_unigene <- function(organism, ref_dir){
+  library(mygene)
+  entrezids <- .load_ref(organism, "entrezids", ref_dir)
+
+  df_unigene <- queryMany(entrezids,
+                          scopes = "entrezgene",
+                          fields = "unigene",
+                          pecies = organism,
+                          returnall = TRUE)
+
+  table(sapply(df_unigene$response[,"unigene"], is.null))
+  df_unigene$response$unigene <- sapply(df_unigene$response$unigene, function(x) paste(x, collapse=";"))
+  my_df <- df_unigene$response[df_unigene$response$unigene!="",]
+  unigene <- data.frame(my_df) %>%
+    dplyr::select("query", "unigene") %>%
+    dplyr::rename(entrezgene_id=query) %>%
+    tidyr::separate_rows(unigene, sep=";")
+  return(unigene)
+}
+
+#' Gets a mapping of genbank to entrez.
+#' Note - these tables are very large.
+#'
+#' @param organism the organism to grab data for: rat, mouse, or human
+#' @return a table with genbank and entrez ids
+.get_genbank <- function(organism){
+
+  if (organism=="human"){
+    library(org.Hs.eg.db)
+    x <- org.Hs.egACCNUM
+  } else if (organism == "mouse"){
+    library(org.Mm.eg.db)
+    x <- org.Mm.egACCNUM
+  } else if (organism == "rat"){
+    library(org.Rn.eg.db)
+    x <- org.Rn.egACCNUM
+  } else {
+    print("Only implemented for human, rat, and mouse")
+    return(NA)
+  }
+
+  mapped_genes <- mappedkeys(x)
+  xx <- as.list(x[mapped_genes])
+  collapsed <- lapply(xx, function(y) paste(unique(y), collapse=" /// "))
+  df <- data.frame(cbind("entrezgene_id"=names(xx), "genbank"=collapsed)  )
+  rownames(df) <- NULL
+  return(df %>% separate_rows(genbank, sep=" /// "))
+}
+
+#' Gets a list of all entrez ids for an organism.
+#' This pulls the list from the gene map, which is either in the ref_dir or is generated.
+#'
+#' @param organism the organism to grab data for: rat, mouse, or human
+#' @param ref_dir the reference directory to pull from, this is either provided or a tempdir
+#' @return a list of entrez ids
+.extract_entrez <- function(organism, ref_dir){
+  dat.map <- .load_ref(organism, "gene_map", ref_dir)
+
+  entrez_df <- dat.map %>% dplyr::filter(entrezgene_id != "") %>%
+    dplyr::select(entrezgene_id) %>% unique()
+  entrezids <- sapply(entrez_df$entrezgene_id, as.character)
+  return(entrezids)
+}
+
+#' Extract a gene mapping table from biomaRt, this contains ensembl, refseq, entrez ids
+#' and chromsome names. HGNC symbols are included for human and mouse.
+#'
+#' @param organism the organism to grab data for: rat, mouse, or human
+#' @return mapping table for use in converting between IDs
+.extract_biomart_ref <- function(organism){
+  library(biomaRt)
+
+  ORG.STR.LIST <- list("human"="hsapiens", "rat"="rnorvegicus", "mouse"="mmusculus")
+  ensembl <- useMart("ensembl", dataset=sprintf("%s_gene_ensembl",
+                                                ORG.STR.LIST[[organism]]))
+  if (organism %in% c("human", "mouse")){
+    attribute_list <- c("ensembl_gene_id", "hgnc_symbol", "refseq_mrna", "entrezgene_id",  "chromosome_name")
+  } else {
+    attribute_list <- c("ensembl_gene_id",  "refseq_mrna", "entrezgene_id",  "chromosome_name")
+  }
+  gene_map <- getBM(attributes = attribute_list, mart=ensembl)
+  return(gene_map)
+}
+
+#' Gets a table of all the X,Y genes for that organism with the entrez ids
+#'
+#' @param organism the organism to grab data for: rat, mouse, or human
+#' @param ref_dir the reference directory to pull from, this is either provided or a tempdir
+#' @return a table with two columns "gene", the entrez gene id, and "chr",
+#'        the chromosome name, which will be one of X and Y
+.get_xy_genes <- function(organism, ref_dir){
+  dat.map <- .load_ref(organism, "gene_map", ref_dir)
+  dat.map %>% dplyr::filter(chromosome_name %in% c("X", "Y")) %>%
+    dplyr::select(entrezgene_id, chromosome_name) %>%
+    dplyr::arrange(chromosome_name) %>%
+    tidyr::rename("gene"=entrezgene_id, "chr"=chromosome_name)
+}
+
+#' Code to generate all reference tables for rat, mouse, and human in a reference directory.
+#' This is particularly useful if you need to load data for a ton of different GPLs.
+#' Note that this produces about 400 MB of data - so make sure you have the space.
+#'
+#' @param ref_dir option to set reference directory  (defaults to tempdir)
+generate_all_ref <- function(ref_dir=NULL){
+  if (is.null(ref_dir)){
+    ref_dir <- tempdir()
+  }
+
+  types <- c("gene_map", "entrezids", "xy_genes", "genbank", "unigene")
+  organisms <- c("rat", "mouse", "human")
+  lapply(organism, function(organism){
+    lapply(types, function(type){
+      tryCatch({
+        res <- .load_ref(type, organism, ref_dir, save_dat=TRUE)
+        rm(res)
+        return(1)
+      }, error = function(err){
+        print(err)
+        print(sprintf("error loading %s, %s", organism, type))
+        return(0)
+      })
+    })
+  })
+}
+
+
+
