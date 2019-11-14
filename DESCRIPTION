@@ -19,7 +19,12 @@ Imports:
     MetaIntegrator (>= 2.1.1),
     GEOquery,
     tidyr,
-    stringr
+    stringr,
+    biomaRt,
+    org.Hs.eg.db,
+    org.Mm.eg.db,
+    org.Rn.eg.db,
+    mygene
 Suggests: 
     knitr,
     rmarkdown

@@ -1,4 +1,35 @@
 
+#' Wrapper to parse and map data from multiple gpls.
+#'
+#' @param gpl.list list of platforms to map
+#' @param ref_dir optional reference directory, defaults to a temporary directory
+#' @param parallelize optionally parallelize the mapping
+map_mult_gpl <- function(gpl.list, ref_dir=NULL, parallelize=FALSE){
+  if (is.null(ref_dir)){
+    ref_dir <- tempdir()
+  }
+  if (parallelize){
+    library('parallel')
+    num_cores <- detectCores()-1
+    cl <- makeCluster(num_cores)
+    parLapply(cl, gpl.list, function(gpl){
+      ref_tab <- parse_entrez_from_gpl(gpl, ref_dir)
+      if (!is.na(ref_tab)){
+        write.table(ref_tab, file=sprintf("%s/%s_map.txt", ref_dir, gpl), sep="\t", quote=FALSE, row.names=FALSE)
+      }
+    })
+    stopCluster(cl)
+
+  } else {
+    lapply(gpl.list, function(gpl){
+      print(gpl)
+      ref_tab <- parse_entrez_from_gpl(gpl, ref_dir)
+      if (!is.na(ref_tab)){
+        write.table(ref_tab, file=sprintf("%s/%s_map.txt", ref_dir, gpl), sep="\t", quote=FALSE, row.names=FALSE)
+      }
+      })
+  }
+}
 
 #' Parse and map entrez data from a GPL annotation.
 #'
@@ -7,9 +38,19 @@
 #' @param MIN.OVERLAP the minimum number of mapped genes allowed, default is 8000
 #' @return a data frame with "probe" and "gene" columns, where gene is the entrezid
 parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
+  if (is.null(ref_dir)){
+    ref_dir <- tempdir()
+  }
 
   # read in GPL data
-  gpl <- GEOquery::getGEO(gpl.name)
+  tryCatch({
+    gpl <- GEOquery::getGEO(gpl.name)
+
+  }, error = function(e) {
+    print(sprintf("Error loading %s:", gpl.name))
+    print(error)
+    return(NA)
+  })
 
   # check the organism
   organism <- gpl@header$taxid
@@ -132,7 +173,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
 .reform_entrez_df <- function(df, entrez.col.name="gene"){
   df[,entrez.col.name] <- sapply(df[,entrez.col.name], function(x)
     paste(stringr::str_extract_all(x, "[0-9]+")[[1]], collapse=";"))
-  df %>% tidyr::separate_rows(entrez.col.name, sep=";")
+  tidyr::separate_rows(df, entrez.col.name, sep=";")
 }
 
 
@@ -170,7 +211,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
 
   # format into a data frame
   df2 <- data.frame(cbind("probe"=df[,1], "gene_col"=gene_vals))
-  df3 <- df2 %>% tidyr::separate_rows(gene_col, sep=" /// ")
+  df3 <- tidyr::separate_rows(df2, gene_col, sep=" /// ")
   return(df3)
 }
 
@@ -190,7 +231,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
   if (any(stringr::str_detect(df[,my.col], sprintf("^%s$", pattern)))){
     df2 <- df[,c(1, my.col)]
     colnames(df2) <- c("probe", "gene_col")
-    df3 <- df2 %>% tidyr::separate_rows(gene, sep=" /// ")
+    df3 <- tidyr::separate_rows(df2, gene, sep=" /// ")
     return(df3)
   }
 
@@ -200,7 +241,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
     paste(x, collapse=" /// "))
   probe.ids <- df[,1]
   df2 <- data.frame(cbind("probe"=probe.ids, "gene_col"=gene_vals_col))
-  df3 <- df2 %>% tidyr::separate_rows(gene_col, sep=" /// ")
+  df3 <- tidyr::separate_rows(df2, gene_col, sep=" /// ")
   return(df3)
 }
 
@@ -232,15 +273,21 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
 #' @return a parsed probe/gene data frame
 .map_from_refseq <- function(gpl.df, my.col, organism, ref_dir=NULL){
   # check that it matches the whole column -- if not, parse
+  library(dplyr) # for pipe
   probe.gene <- .find_col_loc(gpl.df, my.col, "N[R|M][_][\\d]+[_.-]*[\\w\\d]*")
   colnames(probe.gene) <- c("probe", "refseq_mrna")
   gene_map <- .load_ref(organism, "refseq", ref_dir)
   ref_entr <- gene_map %>%
     dplyr::select(refseq_mrna, entrezgene_id) %>%
     dplyr::filter(!is.na(entrezgene_id)) %>%
+    dplyr::filter(refseq_mrna != "") %>%
     unique()
-  dplyr::inner_join(probe.gene, ref_entr) %>%
+  probe.gene$refseq_mrna <- sapply(probe.gene$refseq_mrna, function(x)
+    unlist(stringr::str_split(x, "\\.")[[1]][[1]]))
+  mapping.df <- dplyr::inner_join(probe.gene, ref_entr) %>%
     dplyr::rename(gene=entrezgene_id)
+  mapping.df$probe <- sapply(mapping.df$probe, unlist)
+  return(mapping.df)
 }
 
 #' Helper function to extract and map ensembl to entrez
@@ -252,7 +299,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
 #' @param ref_dir option to set reference directory  (defaults to tempdir)
 #' @return a parsed probe/gene data frame
 .map_from_ensembl <- function(gpl.df, my.col, organism, org.ensembl.id, ref_dir=NULL){
-
+  library('dplyr') # for pipe
   probe.gene <- .parse_multi_col(gpl.df, my.col,
                                 sprintf("[%s][\\d]+[.-]*[\\w\\d]*",
                                         org.ensembl.id))
@@ -322,8 +369,8 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
 
   genbank <- .load_ref(organism, "genbank", ref_dir)
 
-  dplyr::inner_join(probe.gene, genbank) %>%
-    dplyr::rename(gene=entrezgene_id)
+  res <- dplyr::inner_join(probe.gene, genbank)
+  dplyr::rename(res, gene=entrezgene_id)
 }
 
 

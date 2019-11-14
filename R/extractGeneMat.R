@@ -51,13 +51,12 @@
 #' @param ref_dir option to set reference directory  (defaults to tempdir)
 #' @return gene.to.probe a mapping from genes to probes
 .getGeneToProbe <- function(platform, gse_keys=NULL, platform_dir=NULL, ref_dir=NULL){
-  require('miceadds')
   if (is.null(platform_dir)){
     platform_dir <- tempdir()
   }
   platform.path <- sprintf("%s/%s.RData", platform_dir, platform)
   if (file.exists(platform.path)){
-    load.Rdata(platform.path, "gene.to.probe")
+    miceadds::load.Rdata(platform.path, "gene.to.probe")
   }  else {
 
     # extract the keys and then convert it to a table

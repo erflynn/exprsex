@@ -13,13 +13,13 @@
   if (is.null(ref_dir)){
     ref_dir <- tempdir()
   }
-  if (type %in% c("ensembl", "refseq", "hgnc")){
+  if (type %in% c("ensembl", "refseq", "hgnc", "gene_map")){
     type <- "gene_map"
   }
   # checks first for the data - if it exists, load it
   dat.path <- sprintf("%s/%s_%s.RData", ref_dir, organism, type)
   if (file.exists(dat.path)){
-    load.RData(dat.path, "ref_dat")
+    miceadds::load.Rdata(dat.path, "ref_dat")
     return(ref_dat)
   } else {
     # if the data does not exist - generate it and save it in the ref_dir
@@ -38,13 +38,19 @@
 #' @param ref_dir the reference directory to pull from, this is either provided or a tempdir
 #' @return the desired mapping data
 .get_ref_data <- function(organism, type, ref_dir){
-  ref_dat <- case_when(
-    type == "gene_map" ~ .extract_biomart_ref(organism),
-    type == "entrezids" ~ .extract_entrez(organism, ref_dir),
-    type == "genbank" ~ .get_genbank(organism),
-    type == "unigene" ~ .get_unigene(organism, ref_dir),
-    type == "xy_genes" ~ .get_xy_genes(organism, ref_dir)
-    )
+  if (type == "gene_map"){
+    ref_dat <- .extract_biomart_ref(organism)
+  } else if (type == "entrezids") {
+    ref_dat <- .extract_entrez(organism, ref_dir)
+  } else if (type == "genbank"){
+    ref_dat <- .get_genbank(organism)
+  } else if (type =="unigene"){
+    ref_dat <- .get_unigene(organism, ref_dir)
+  } else if (type == "xy_genes"){
+    ref_dat <- .get_xy_genes(organism, ref_dir)
+  } else {
+    .my_assert("error type not implemented", 1==2)
+  }
   return(ref_dat)
 }
 
@@ -101,7 +107,7 @@
   collapsed <- lapply(xx, function(y) paste(unique(y), collapse=" /// "))
   df <- data.frame(cbind("entrezgene_id"=names(xx), "genbank"=collapsed)  )
   rownames(df) <- NULL
-  return(df %>% separate_rows(genbank, sep=" /// "))
+  return(tidyr::separate_rows(df, genbank, sep=" /// "))
 }
 
 #' Gets a list of all entrez ids for an organism.
@@ -111,6 +117,7 @@
 #' @param ref_dir the reference directory to pull from, this is either provided or a tempdir
 #' @return a list of entrez ids
 .extract_entrez <- function(organism, ref_dir){
+  library('dplyr') # for #%>%
   dat.map <- .load_ref(organism, "gene_map", ref_dir)
 
   entrez_df <- dat.map %>% dplyr::filter(entrezgene_id != "") %>%
@@ -125,17 +132,16 @@
 #' @param organism the organism to grab data for: rat, mouse, or human
 #' @return mapping table for use in converting between IDs
 .extract_biomart_ref <- function(organism){
-  library(biomaRt)
 
   ORG.STR.LIST <- list("human"="hsapiens", "rat"="rnorvegicus", "mouse"="mmusculus")
-  ensembl <- useMart("ensembl", dataset=sprintf("%s_gene_ensembl",
+  ensembl <- biomaRt::useMart("ensembl", dataset=sprintf("%s_gene_ensembl",
                                                 ORG.STR.LIST[[organism]]))
   if (organism %in% c("human", "mouse")){
     attribute_list <- c("ensembl_gene_id", "hgnc_symbol", "refseq_mrna", "entrezgene_id",  "chromosome_name")
   } else {
     attribute_list <- c("ensembl_gene_id",  "refseq_mrna", "entrezgene_id",  "chromosome_name")
   }
-  gene_map <- getBM(attributes = attribute_list, mart=ensembl)
+  gene_map <- biomaRt::getBM(attributes = attribute_list, mart=ensembl)
   return(gene_map)
 }
 
@@ -150,25 +156,32 @@
   dat.map %>% dplyr::filter(chromosome_name %in% c("X", "Y")) %>%
     dplyr::select(entrezgene_id, chromosome_name) %>%
     dplyr::arrange(chromosome_name) %>%
-    tidyr::rename("gene"=entrezgene_id, "chr"=chromosome_name)
+    dplyr::rename("gene"=entrezgene_id, "chr"=chromosome_name)
 }
 
 #' Code to generate all reference tables for rat, mouse, and human in a reference directory.
 #' This is particularly useful if you need to load data for a ton of different GPLs.
 #' Note that this produces about 400 MB of data - so make sure you have the space.
 #'
+#' @export
 #' @param ref_dir option to set reference directory  (defaults to tempdir)
-generate_all_ref <- function(ref_dir=NULL){
+#' @param organisms specify which organisms you want, can be any of "mouse", "rat"
+#'                  or "human" (defaults to all three)
+generate_all_ref <- function(ref_dir=NULL, organisms=c("mouse", "rat", "human")){
+  # check organisms are in mouse, rat, or human
+  .my_assert("Organisms must be one of mouse, rat, or human",
+             length(setdiff(organisms, c("mouse", "rat", "human")))==0)
+
   if (is.null(ref_dir)){
     ref_dir <- tempdir()
-  }
+  } else { # make sure the ref_dir exists
 
-  types <- c("gene_map", "entrezids", "xy_genes", "genbank", "unigene")
-  organisms <- c("rat", "mouse", "human")
-  lapply(organism, function(organism){
-    lapply(types, function(type){
+  }
+  ref.types=c("gene_map", "entrezids", "xy_genes", "genbank", "unigene")
+  lapply(organisms, function(organism){
+    lapply(ref.types, function(type){
       tryCatch({
-        res <- .load_ref(type, organism, ref_dir, save_dat=TRUE)
+        res <- .load_ref(organism, type, ref_dir, save_dat=TRUE)
         rm(res)
         return(1)
       }, error = function(err){
