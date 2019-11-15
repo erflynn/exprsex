@@ -14,7 +14,7 @@ map_mult_gpl <- function(gpl.list, ref_dir=NULL, parallelize=FALSE){
     cl <- makeCluster(num_cores)
     parLapply(cl, gpl.list, function(gpl){
       ref_tab <- parse_entrez_from_gpl(gpl, ref_dir)
-      if (!is.na(ref_tab)){
+      if (is.data.frame(ref_tab)){
         write.table(ref_tab, file=sprintf("%s/%s_map.txt", ref_dir, gpl), sep="\t", quote=FALSE, row.names=FALSE)
       }
     })
@@ -24,7 +24,7 @@ map_mult_gpl <- function(gpl.list, ref_dir=NULL, parallelize=FALSE){
     lapply(gpl.list, function(gpl){
       print(gpl)
       ref_tab <- parse_entrez_from_gpl(gpl, ref_dir)
-      if (!is.na(ref_tab)){
+      if (is.data.frame(ref_tab)){
         write.table(ref_tab, file=sprintf("%s/%s_map.txt", ref_dir, gpl), sep="\t", quote=FALSE, row.names=FALSE)
       }
       })
@@ -99,12 +99,13 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
   genbank_col <- .detect_genbank_cols_name(gpl@dataTable@columns)
   if (length(genbank_col) != 0){
     print("parsed from GenBank")
-    return(.map_from_genbank(gpl.df, genbank_col, org.name, ref_dir))
+    # TODO - do this differently if this is a genbank column...
+    return(.map_from_genbank(gpl.df, genbank_col, org.name, ref_dir, col.given=TRUE))
   }
   genbank_col <- .detect_genbank_cols(gpl.df, org.name)
   if (length(genbank_col) != 0){
     print("parsed from GenBank")
-    return(.map_from_genbank(gpl.df, genbank_col, org.name, ref_dir))
+    return(.map_from_genbank(gpl.df, genbank_col, org.name, ref_dir, col.given=FALSE))
   }
   # <-- genbank is done first because often contains REFSEQ cols ---> #
 
@@ -269,8 +270,9 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
 #' @param my.col the column containing the genbank data
 #' @param organism the organism: rat, mouse, or human
 #' @param ref_dir option to set reference directory  (defaults to tempdir)
+#' @param col.given whether we know the column by name --> don't find loc (defaults to FALSE)
 #' @return a parsed probe/gene data frame
-.map_from_genbank <- function(gpl.df, my.col, organism, ref_dir=NULL){
+.map_from_genbank <- function(gpl.df, my.col, organism, ref_dir=NULL, col.given=FALSE){
   library('dplyr') # for pipe
 
   LIST.GENBANK.STR <-
@@ -279,8 +281,15 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
          "human"="AAA52496|AAA52518|AAA52519|AAA53191|AAA86283")
   genbank_str <- LIST.GENBANK.STR[[organism]]
 
-  probe.gene <- .find_col_loc(gpl.df, my.col, genbank_str)
-  colnames(probe.gene) <- c("probe", "genbank")
+  if (!col.given) {
+    probe.gene <- .find_col_loc(gpl.df, my.col, genbank_str)
+    colnames(probe.gene) <- c("probe", "genbank")
+
+  } else {
+    probe.gene <- gpl.df[,c(1,my.col)]
+    colnames(probe.gene) <- c("probe", "genbank")
+    probe.gene <- tidyr::separate_rows(probe.gene, genbank, sep=" \\\ ")
+  }
 
   genbank <- .load_ref(organism, "genbank", ref_dir)
 
