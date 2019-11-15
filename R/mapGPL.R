@@ -86,8 +86,8 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
   # ------ Find any all integer columns, check for overlap w entrez ------ #
   entrez.col <- .detect_int_cols(gpl.df, MIN.OVERLAP)
 
-  if (length(col_idx) != 0){
-    overlap.lengths <- .check_entrez_overlap(gpl.df, col_idx, org.name, ref_dir)
+  if (length(entrez.col) != 0){
+    overlap.lengths <- .check_entrez_overlap(gpl.df, entrez.col, org.name, ref_dir)
     if (max(overlap.lengths) > MIN.OVERLAP){
       entrez.col <- as.numeric(names(overlap.lengths)[which.max(overlap.lengths)[[1]]])
       df <- data.frame("probe"=probe.ids, "gene"=gpl.df[,entrez.col])
