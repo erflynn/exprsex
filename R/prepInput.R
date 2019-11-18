@@ -29,6 +29,8 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
     geo.obj <- MetaIntegrator::getGEOData(gse)
   }
 
+  # // TODO: check that the object downloaded
+
   # grab platform and platform mapping
   platform.id <- unique(geo.obj$originalData[[1]]$platform)
   if (!is.null(ref.dir)){
@@ -54,9 +56,12 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
   # write out for sex labeling
   if (!is.null(out.dir)){
     write.table(gene_mat,
-                file=sprintf("%s/%s_gene.txt", out.dir, gse), row.names=TRUE, quote=FALSE)
+                file=sprintf("%s/%s_gene.txt", out.dir, gse),
+                row.names=TRUE, quote=FALSE)
   }
-  return(gene_mat)
+  geo.obj2 <- geo.obj$originalData[[1]] # // TODO - does this work if mult platforms?
+  geo.obj2$expr_mat <- gene_mat
+  return(geo.obj2)
 }
 
 #' Convert the expression matrix to genes.
