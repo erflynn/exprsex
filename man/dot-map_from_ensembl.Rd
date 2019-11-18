@@ -4,8 +4,7 @@
 \alias{.map_from_ensembl}
 \title{Helper function to extract and map ensembl to entrez}
 \usage{
-.map_from_ensembl(gpl.df, my.col, organism, org.ensembl.id,
-  ref_dir = NULL)
+.map_from_ensembl(gpl.df, my.col, organism, ref_dir = NULL)
 }
 \arguments{
 \item{gpl.df}{the feature data from the GPL data frame}
@@ -13,8 +12,6 @@
 \item{my.col}{the column containing the ensembl data}
 
 \item{organism}{the organism: rat, mouse, or human}
-
-\item{org.ensembl.id}{the prefix for the organism (e.g. "ENSG")}
 
 \item{ref_dir}{option to set reference directory  (defaults to tempdir)}
 }

@@ -7,6 +7,8 @@
 .convertToGenes(gse.obj, gene_list)
 }
 \arguments{
+\item{gse.obj}{the gene object}
+
 \item{gene_list}{list of genes for the rows}
 }
 \value{

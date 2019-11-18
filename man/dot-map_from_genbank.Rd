@@ -4,7 +4,8 @@
 \alias{.map_from_genbank}
 \title{Helper function to extract and map genbank to entrez}
 \usage{
-.map_from_genbank(gpl.df, my.col, organism, genbank_str, ref_dir = NULL)
+.map_from_genbank(gpl.df, my.col, organism, ref_dir = NULL,
+  col.given = FALSE)
 }
 \arguments{
 \item{gpl.df}{the feature data from the GPL data frame}
@@ -14,6 +15,8 @@
 \item{organism}{the organism: rat, mouse, or human}
 
 \item{ref_dir}{option to set reference directory  (defaults to tempdir)}
+
+\item{col.given}{whether we know the column by name --> don't find loc (defaults to FALSE)}
 }
 \value{
 a parsed probe/gene data frame

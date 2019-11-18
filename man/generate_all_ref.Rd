@@ -6,10 +6,14 @@
 This is particularly useful if you need to load data for a ton of different GPLs.
 Note that this produces about 400 MB of data - so make sure you have the space.}
 \usage{
-generate_all_ref(ref_dir = NULL)
+generate_all_ref(ref_dir = NULL, organisms = c("mouse", "rat",
+  "human"))
 }
 \arguments{
 \item{ref_dir}{option to set reference directory  (defaults to tempdir)}
+
+\item{organisms}{specify which organisms you want, can be any of "mouse", "rat"
+or "human" (defaults to all three)}
 }
 \description{
 Code to generate all reference tables for rat, mouse, and human in a reference directory.

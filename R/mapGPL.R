@@ -15,7 +15,7 @@ map_mult_gpl <- function(gpl.list, ref_dir=NULL, parallelize=FALSE){
     parLapply(cl, gpl.list, function(gpl){
       ref_tab <- parse_entrez_from_gpl(gpl, ref_dir)
       if (is.data.frame(ref_tab)){
-        write.table(ref_tab, file=sprintf("%s/%s_map.txt", ref_dir, gpl), sep="\t", quote=FALSE, row.names=FALSE)
+        save(ref_tab, file=sprintf("%s/%s_map.RData", ref_dir, gpl))
       }
     })
     stopCluster(cl)
@@ -25,9 +25,9 @@ map_mult_gpl <- function(gpl.list, ref_dir=NULL, parallelize=FALSE){
       print(gpl)
       ref_tab <- parse_entrez_from_gpl(gpl, ref_dir)
       if (is.data.frame(ref_tab)){
-        write.table(ref_tab, file=sprintf("%s/%s_map.txt", ref_dir, gpl), sep="\t", quote=FALSE, row.names=FALSE)
+        save(ref_tab, file=sprintf("%s/%s_map.RData", ref_dir, gpl))
       }
-      })
+    })
   }
 }
 

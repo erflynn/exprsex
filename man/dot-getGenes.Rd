@@ -7,6 +7,8 @@
 .getGenes(gpl.name, ref_dir = NULL)
 }
 \arguments{
+\item{gpl.name}{the name of the platform}
+
 \item{ref_dir}{option to set reference directory  (defaults to tempdir)}
 }
 \value{
