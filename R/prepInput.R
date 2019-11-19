@@ -43,10 +43,19 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
     ref_tab <- parse_entrez_from_gpl(platform.id)
   }
 
+  # remove missing data from ref tab
+  ref_tab2 <- dplyr::filter(ref_tab,
+                            !is.na(gene) &
+                              !is.na(probe) &
+                              gene != "" &
+                              probe != "" &
+                              gene != "NA" &
+                              probe != "NA")
+
 
   # map to genes
   exp_mat <- geo.obj$originalData[[1]]$expr
-  gene_mat <- .convertGenes(exp_mat, ref_tab)
+  gene_mat <- .convertGenes(exp_mat, ref_tab2)
 
   # convert to ranks
   if (to.ranks){
@@ -75,7 +84,6 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
 
   gene.to.probe <- gene.to.probe <- split(sapply(probe_gene$probe, as.character),
                                           sapply(probe_gene$gene, as.character))
-  gene.to.probe <- gene.to.probe[names(gene.to.probe)!=""]
   expData2 <- do.call(cbind, lapply(1:length(gene.to.probe), function(x) {
     # get the gene and the probe
     g <- names(gene.to.probe)[x]
