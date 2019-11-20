@@ -31,6 +31,14 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
 
   # // TODO: check that the object downloaded
 
+  # // TODO work for multiple platforms??
+  if ((length(geo.obj$originalData)==0) |
+      (! "expr" %in% c(geo.obj$originalData[[1]])) |
+      (is.null(dim(geo.obj$originalData[[1]]$expr)))){
+    print(sprintf("expression data is missing for %s", gse))
+    return(NA)
+  }
+
   # grab platform and platform mapping
   platform.id <- unique(geo.obj$originalData[[1]]$platform)
   if (!is.null(ref.dir)){
@@ -42,20 +50,18 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
   } else {
     ref_tab <- parse_entrez_from_gpl(platform.id)
   }
-
-  # remove missing data from ref tab
-  ref_tab2 <- dplyr::filter(ref_tab,
-                            !is.na(gene) &
-                              !is.na(probe) &
-                              gene != "" &
-                              probe != "" &
-                              gene != "NA" &
-                              probe != "NA")
+  # what to do if these data do not exist?
+  if (is.na(ref_tab)){
+    print(sprintf("probe mapping data is missing for %s so we cannot map %s",
+                  platform.id, gse))
+    return(NA)
+  }
 
 
   # map to genes
   exp_mat <- geo.obj$originalData[[1]]$expr
-  gene_mat <- .convertGenes(exp_mat, ref_tab2)
+
+  gene_mat <- .convertGenes(exp_mat, ref_tab)
 
   # convert to ranks
   if (to.ranks){
@@ -82,8 +88,11 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
 .convertGenes <- function(expData, probe_gene){
   .checkExprMatFormat(expData) # other input checks?
 
-  gene.to.probe <- gene.to.probe <- split(sapply(probe_gene$probe, as.character),
+  gene.to.probe <- split(sapply(probe_gene$probe, as.character),
                                           sapply(probe_gene$gene, as.character))
+  # filter to remove hugely multi-mapping??
+  gene.to.probe <- gene.to.probe[(sapply(gene.to.probe, length) < 15)]
+
   expData2 <- do.call(cbind, lapply(1:length(gene.to.probe), function(x) {
     # get the gene and the probe
     g <- names(gene.to.probe)[x]

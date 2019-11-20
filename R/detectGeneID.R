@@ -32,10 +32,10 @@
 #' @param MIN.OVERLAP the minimum number of mapped genes allowed, default=8000
 #' @return a list of the indices of the columns containing these ids
 .detect_int_cols <- function(gpl.df, MIN.OVERLAP=8000){
-  int_only_cols <- sapply(1:ncol(gpl.df), function(i){
+  int_only_cols <- sapply(2:ncol(gpl.df), function(i){
     sum(stringr::str_detect(gpl.df[,i], "^[0-9]+$"), na.rm=TRUE)
   })
-  col_idx <- which(int_only_cols > MIN.OVERLAP)
+  col_idx <- which(int_only_cols > MIN.OVERLAP)+1
   return(col_idx)
 }
 
@@ -46,12 +46,14 @@
 #' @param MIN.OVERLAP the minimum number of mapped genes allowed, default=8000
 #' @return a list of the indices of the columns containing these ids
 .find_entrez_w_in_block <- function(gpl.df, MIN.OVERLAP=8000){
-  int_cols <- sapply(1:ncol(gpl.df), function(i){
+  INTERNAL.SEP <-"///|//|,|\\|"
+  SUFFIX.SEP <- "\\."
+  int_cols <- sapply(2:ncol(gpl.df), function(i){
     ids <- stringr::str_replace_all(unlist(stringr::str_split(gpl.df[,i],
-                                                              "///|//|,")), " ", "")
+                                                             INTERNAL.SEP)), " ", "")
     sum(stringr::str_detect(ids, "^[0-9]+$"), na.rm=TRUE)
   })
-  return(which(int_cols > MIN.OVERLAP))
+  return(which(int_cols > MIN.OVERLAP)+1)
 }
 
 #' Identify the refseq columns and return the one with the most overlap.
@@ -61,12 +63,12 @@
 #' @param MIN.OVERLAP the minimum number of mapped genes allowed, default=8000
 #' @return the index of the column containing these ids
 .detect_refseq_cols <- function(gpl.df, MIN.OVERLAP=8000 ){
-  refseq_cols <- sapply(1:ncol(gpl.df), function(i){
+  refseq_cols <- sapply(2:ncol(gpl.df), function(i){
     sum(stringr::str_detect(gpl.df[,i], "NM_[0-9]+"), na.rm=TRUE)
   })
   if (max(refseq_cols) > MIN.OVERLAP){
     refseq_col <- which.max(refseq_cols)[[1]]
-    return(refseq_col)
+    return(refseq_col+1)
   }
   return(c())
 }
@@ -80,12 +82,12 @@
 .detect_ensembl_cols <- function(gpl.df, organism, MIN.OVERLAP=8000){
   ORG.ENSEMBL.SUFF <- list("human"="G", "mouse"="MUSG", "rat"="RNOG")
   org.ensembl.id <- sprintf("ENS%s", ORG.ENSEMBL.SUFF[[organism]])
-  ensembl_cols <- sapply(1:ncol(gpl.df), function(i){
+  ensembl_cols <- sapply(2:ncol(gpl.df), function(i){
     sum(stringr::str_detect(gpl.df[,i], sprintf("%s[0-9]+",org.ensembl.id)), na.rm=TRUE)
   })
   if (max(ensembl_cols) > MIN.OVERLAP){
     ensembl_col <- which.max(ensembl_cols)[[1]]
-    return(ensembl_col)
+    return(ensembl_col+1)
   }
   return(c())
 }
@@ -96,12 +98,12 @@
 #' @param MIN.OVERLAP the minimum number of mapped genes allowed, default=8000
 #' @return the index of the column containing these ids
 .detect_unigene_cols <- function(gpl.df, MIN.OVERLAP=8000){
-  unigene_cols <- sapply(1:ncol(gpl.df), function(i){
-    sum(stringr::str_detect(gpl.df[,i], "(Hs\\.[0-9]+)|(Rn\\.[0-9]+)|(Mm\\.[0-9]+)"), na.rm=TRUE)
+  unigene_cols <- sapply(2:ncol(gpl.df), function(i){
+    sum(stringr::str_detect(gpl.df[,i], "[Hs|Rn|Mm]\\.[0-9]+"), na.rm=TRUE)
   })
   if (max(unigene_cols) > MIN.OVERLAP){
     unigene_col <- which.max(unigene_cols)[[1]]
-    return(unigene_col)
+    return(unigene_col+1)
   }
   return(c())
 }
@@ -112,12 +114,12 @@
 #' @param gpl.df the gpl data frame
 #' @return the index of the column containing these ids
 .detect_hgnc_cols <- function(gpl.df){
-  hgnc_cols <- sapply(1:ncol(gpl.df), function(i){
+  hgnc_cols <- sapply(2:ncol(gpl.df), function(i){
     sum(grepl("GAPDH", gpl.df[,i], ignore.case=TRUE), na.rm=TRUE)
   })
   hgnc_idces <- which(hgnc_cols > 0)
   if (length(hgnc_idces) > 0){
-    return(which.max(hgnc_cols)[[1]])
+    return(which.max(hgnc_cols)[[1]]+1)
   }
   return(c())
 }
@@ -138,12 +140,12 @@
          "mouse" ="AAA37659|AAH82592|AAH83065|AAH83079|AAH83080",
          "human"="AAA52496|AAA52518|AAA52519|AAA53191|AAA86283")
   genbank_str <- LIST.GENBANK.STR[[organism]]
-  genbank_cols <- sapply(1:ncol(gpl.df), function(i){
+  genbank_cols <- sapply(2:ncol(gpl.df), function(i){
     sum(grepl(genbank_str, gpl.df[,i]), na.rm=TRUE)
   })
   genbank_idces <- which(genbank_cols > 0)
   if (length(genbank_idces) > 0){
-    return(which.max(genbank_cols)[[1]])
+    return(which.max(genbank_cols)[[1]]+1)
   }
   return(c())
 }
@@ -222,12 +224,14 @@
 #' @param pattern the pattern to extract
 #' @return an expanded data frame with probe/gene data
 .parse_multi_col <- function(df, my.col, pattern){
-
+  INTERNAL.SEP <-"///|//|,|\\|"
+  SUFFIX.SEP <- "\\."
   # check whether it matches the whole pattern
   if (any(stringr::str_detect(df[,my.col], sprintf("^%s$", pattern)))){
     df2 <- df[,c(1, my.col)]
     colnames(df2) <- c("probe", "gene_col")
-    df3 <- tidyr::separate_rows(df2, gene_col, sep="///|,")
+    df3 <- tidyr::separate_rows(df2, gene_col, sep=INTERNAL.SEP)
+    df3 <- dplyr::mutate(df3, gene_col=stringr::str_trim(gene_col))
     return(df3)
   }
 

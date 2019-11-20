@@ -38,8 +38,9 @@ map_mult_gpl <- function(gpl.list, ref_dir=NULL, parallelize=FALSE){
 #' @param gpl.name the name gpl to load
 #' @param ref_dir optional reference directory, defaults to a temporary directory
 #' @param MIN.OVERLAP the minimum number of mapped genes allowed, default is 8000
+#' @param verbose print addition logging data if it fails, defaults to TRUE
 #' @return a data frame with "probe" and "gene" columns, where gene is the entrezid
-parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
+parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verbose=TRUE){
   if (is.null(ref_dir)){
     ref_dir <- tempdir()
   }
@@ -71,9 +72,12 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
   gpl.df <- gpl@dataTable@table
   probe.ids <- gpl.df[,1]
 
+  log_str <- sprintf("LOG %s:",gpl.name)
+
   # ------ Find columns labeled ENTREZ IDs ------ #
   entrez.col <- .detect_entrez_ids_name(gpl@dataTable@columns)
   if (length(entrez.col) != 0){
+    log_str <- sprintf("%s\n\tFound entrez column by name %s", log_str,  paste(entrez.col, collapse=";"))
     # look for overlap
     overlap.lengths <- .check_entrez_overlap(gpl.df, entrez.col,
                                              org.name, ref_dir)
@@ -82,24 +86,30 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
       df <- data.frame("probe"=probe.ids, "gene"=gpl.df[,entrez.col])
       return(.reform_entrez_df(df))
     }
+    log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, max(overlap.lengths))
+
   }
 
   # ------ Find any all integer columns, check for overlap w entrez ------ #
   entrez.col1 <- .detect_int_cols(gpl.df, MIN.OVERLAP)
 
   if (length(entrez.col1) != 0){
+    log_str <- sprintf("%s\n\tFound int only column %s", log_str,  paste(entrez.col1, collapse=";"))
     overlap.lengths <- .check_entrez_overlap(gpl.df, entrez.col1, org.name, ref_dir)
     if (max(overlap.lengths) > MIN.OVERLAP){
       entrez.col <- as.numeric(names(overlap.lengths)[which.max(overlap.lengths)[[1]]])
       df <- data.frame("probe"=probe.ids, "gene"=gpl.df[,entrez.col])
       return(.reform_entrez_df(df))
     }
+    log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, max(overlap.lengths))
+
   }
 
   # ------ Look for integers *within* a column, check for overlap w entrez ----- #
   entrez.col2 <- .find_entrez_w_in_block(gpl.df, MIN.OVERLAP)
   entrez.col3 <- setdiff(entrez.col2, entrez.col1) # remove already examined columns
   if (length(entrez.col3) != 0){
+    log_str <- sprintf("%s\n\tFound int within column %s", log_str,  paste(entrez.col3, collapse=";"))
     overlap.lengths <- .check_entrez_overlap(gpl.df, entrez.col3, org.name, ref_dir)
     if (max(overlap.lengths) > MIN.OVERLAP){
       entrez.col <- as.numeric(names(overlap.lengths)[which.max(overlap.lengths)[[1]]])
@@ -107,26 +117,32 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
                               .load_ref(org.name, "entrezids", ref_dir))
       return(dplyr::rename(mapped, gene=gene_col))
     }
+    log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, max(overlap.lengths))
   }
 
   # ------ MAP FROM GenBank ------ #
   genbank_col <- .detect_genbank_cols_name(gpl@dataTable@columns)
   if (length(genbank_col) != 0){
     # TODO - do this differently if this is a genbank column...
+    log_str <- sprintf("%s\n\tFound genbank column by name %s", log_str, paste(genbank_col, collapse=";"))
+
     mapped <- .map_from_genbank(gpl.df, genbank_col, org.name,
                                 ref_dir, col.given=TRUE)
     if (length(unique(mapped$gene)) > MIN.OVERLAP ){
-      print("parsed from GenBank")
+      print(sprintf("parsed %s from GenBank", gpl.name))
       return(mapped)
     }
+    log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, length(unique(mapped$gene)))
   }
   genbank_col <- .detect_genbank_cols(gpl.df, org.name)
   if (length(genbank_col) != 0){
+    log_str <- sprintf("%s\n\tFound genbank ids in a column %s", log_str,  paste(genbank_col, collapse=";"))
     mapped <- .map_from_genbank(gpl.df, genbank_col, org.name, ref_dir, col.given=FALSE)
     if (length(unique(mapped$gene)) > MIN.OVERLAP ){
-      print("parsed from GenBank")
+      print(sprintf("parsed %s from GenBank", gpl.name))
       return(mapped)
     }
+    log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, length(unique(mapped$gene)))
   }
   # <-- genbank is done first because often contains REFSEQ cols ---> #
 
@@ -134,44 +150,58 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
   refseq_col <- .detect_refseq_cols(gpl.df, MIN.OVERLAP)
 
   if (length(refseq_col) != 0){
+    log_str <- sprintf("%s\n\tFound refseq ids in a column %s", log_str,  paste(refseq_col, collapse=";"))
     mapped <- .map_from_refseq(gpl.df, refseq_col, org.name, ref_dir)
     if (length(unique(mapped$gene)) > MIN.OVERLAP){
-      print("parsed from refseq")
+      print(sprintf("parsed %s from refseq", gpl.name))
       return(mapped)
     }
+    log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, length(unique(mapped$gene)))
   }
 
   # ------ MAP FROM ENSEMBL ------ #
   ensembl_col <- .detect_ensembl_cols(gpl.df, org.name, MIN.OVERLAP)
   if (length(ensembl_col) != 0){
+    log_str <- sprintf("%s\n\tFound ensembl ids in a column %s", log_str,  paste(ensembl_col, collapse=";"))
+
     mapped <- .map_from_ensembl(gpl.df, ensembl_col, org.name, ref_dir)
     if (length(unique(mapped$gene)) > MIN.OVERLAP){
-      print("parsed from ensembl")
+      print(sprintf("parsed %s from ensembl", gpl.name))
       return(mapped)
     }
+    log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, length(unique(mapped$gene)))
+
   }
 
   # ------  MAP FROM HGNC  ------ #
   hgnc_col <- .detect_hgnc_cols(gpl.df)
   if (length(hgnc_col) != 0){
+    log_str <- sprintf("%s\n\tFound hgnc ids in a column %s", log_str,  paste(hgnc_col, collapse=";"))
     mapped <- .map_from_hgnc(gpl.df, hgnc_col, org.name, ref_dir)
     if (length(unique(mapped$gene)) > MIN.OVERLAP){
-      print("parsed from HGNC")
+      print(sprintf("parsed %s from HGNC", gpl.name))
       return(mapped)
     }
+    log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, length(unique(mapped$gene)))
+
   }
 
   # ------ MAP FROM UNIGENE ----- #
   unigene_col <- .detect_unigene_cols(gpl.df, MIN.OVERLAP)
   if (length(unigene_col) != 0){
+    log_str <- sprintf("%s\n\tFound unigene ids in a column %s", log_str,  paste(unigene_col, collapse=";"))
+
     mapped <- .map_from_unigene(gpl.df, unigene_col, org.name, ref_dir)
     if (length(unique(mapped$gene)) > MIN.OVERLAP){
-      print("parsed from unigene")
+      print(sprintf("parsed %s from unigene", gpl.name))
       return(mapped)
     }
+    log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, length(unique(mapped$gene)))
+
   }
 
-  print("No mapping")
+  print(sprintf("No mapping for %s", gpl.name))
+  if (verbose){print(log_str)}
   return(NA)
 }
 
@@ -210,8 +240,11 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
     dplyr::filter(!is.na(entrezgene_id)) %>%
     dplyr::filter(refseq_mrna != "") %>%
     unique()
+
+  INTERNAL.SEP <-"///|//|,|\\|"
+  SUFFIX.SEP <- "\\."
   probe.gene$refseq_mrna <- sapply(probe.gene$refseq_mrna, function(x)
-    unlist(stringr::str_split(x, "\\.")[[1]][[1]]))
+    unlist(stringr::str_split(x, SUFFIX.SEP)[[1]][[1]]))
   mapping.df <- dplyr::inner_join(probe.gene, ref_entr) %>%
     dplyr::rename(gene=entrezgene_id)
   mapping.df$probe <- sapply(mapping.df$probe, unlist)
@@ -232,16 +265,22 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
   org.ensembl.id <- sprintf("ENS%s", ORG.ENSEMBL.SUFF[[organism]])
 
   probe.gene <- .parse_multi_col(gpl.df, my.col,
-                                sprintf("(%s)[\\d]+[.-]*[\\w\\d]*",
+                                sprintf("%s[\\d]+[.-]*[\\w\\d]*",
                                         org.ensembl.id))
   colnames(probe.gene) <- c("probe", "ensembl_gene_id")
+
+  INTERNAL.SEP <-"///|//|,|\\|"
+  SUFFIX.SEP <- "\\."
+  probe.gene$ensembl_gene_id <- sapply(probe.gene$ensembl_gene_id, function(x)
+    unlist(stringr::str_split(x, SUFFIX.SEP)[[1]][[1]]))
   gene_map <- .load_ref(organism, "ensembl", ref_dir)
 
   ens_entr <- gene_map %>%
     dplyr::select(ensembl_gene_id, entrezgene_id) %>%
     dplyr::filter(!is.na(entrezgene_id)) %>%
     unique()
-  dplyr::inner_join(probe.gene, ens_entr) %>%
+   probe.gene %>% dplyr::filter(ensembl_gene_id != "") %>%
+    dplyr::inner_join(ens_entr) %>%
     dplyr::rename(gene=entrezgene_id) %>%
     .clean_mapping()
 }
@@ -317,8 +356,16 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
   } else {
     probe.gene <- gpl.df[,c(1,my.col)]
     colnames(probe.gene) <- c("probe", "genbank")
-    probe.gene <- tidyr::separate_rows(probe.gene, genbank, sep=" \\\ | , ")
+
   }
+
+
+  INTERNAL.SEP <-"///|//|,|\\|"
+  SUFFIX.SEP <- "\\."
+  probe.gene <- tidyr::separate_rows(probe.gene, genbank, sep=INTERNAL.SEP)
+  probe.gene <- dplyr::mutate(probe.gene, genbank=stringr::str_trim(genbank))
+  probe.gene$genbank <- sapply(probe.gene$genbank, function(x)
+    unlist(stringr::str_split(x, SUFFIX.SEP)[[1]][[1]]))
 
   genbank <- .load_ref(organism, "genbank", ref_dir)
 
@@ -340,3 +387,5 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000){
   return(filter(mapped2, gene!="NA" & gene != "" & !is.na(gene) &
                   probe!="NA" & probe != "" & !is.na(probe)))
 }
+
+
