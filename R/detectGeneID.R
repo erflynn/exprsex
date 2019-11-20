@@ -193,6 +193,12 @@
     which(sapply(x, function(y)
       stringr::str_detect(stringr::str_trim(y), sprintf("^%s", ex.str)))))
 
+  if (length(idces)==0){
+    # should we try different IDs?
+    print("error in identifying within column location")
+    return(data.frame("gene"=c(), "probe"=c()))
+  }
+
   # find the location
   idx <- as.numeric(unique(unlist(idces))[[1]])
 
