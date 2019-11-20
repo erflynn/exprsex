@@ -5,7 +5,8 @@
 \title{Heper function to find the location within a column of an ID.
 Used for columns with many fields separated by double and triple slashes}
 \usage{
-.find_col_loc(df, my.col, ex.str)
+.find_col_loc(df, my.col, ex.str, check.overlap = FALSE,
+  id.list = NULL)
 }
 \arguments{
 \item{df}{the data.frame with feature data}
@@ -13,6 +14,10 @@ Used for columns with many fields separated by double and triple slashes}
 \item{my.col}{the column to examine}
 
 \item{ex.str}{an example ID of that type}
+
+\item{check.overlap}{defaults to false}
+
+\item{id.list}{defaults to null}
 }
 \value{
 an expanded data frame with probe/gene data
