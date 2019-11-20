@@ -84,6 +84,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
     if (max(overlap.lengths) > MIN.OVERLAP){
       entrez.col <- as.numeric(names(overlap.lengths)[which.max(overlap.lengths)[[1]]])
       df <- data.frame("probe"=probe.ids, "gene"=gpl.df[,entrez.col])
+      print(sprintf("parsed %s from entrez", gpl.name))
       return(.reform_entrez_df(df))
     }
     log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, max(overlap.lengths))
@@ -99,6 +100,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
     if (max(overlap.lengths) > MIN.OVERLAP){
       entrez.col <- as.numeric(names(overlap.lengths)[which.max(overlap.lengths)[[1]]])
       df <- data.frame("probe"=probe.ids, "gene"=gpl.df[,entrez.col])
+      print(sprintf("parsed %s from entrez", gpl.name))
       return(.reform_entrez_df(df))
     }
     log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, max(overlap.lengths))
@@ -115,6 +117,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
       entrez.col <- as.numeric(names(overlap.lengths)[which.max(overlap.lengths)[[1]]])
       mapped <- .find_col_loc(gpl.df, entrez.col, "[0-9]+", check.overlap=TRUE,
                               .load_ref(org.name, "entrezids", ref_dir))
+      print(sprintf("parsed %s from entrez", gpl.name))
       return(dplyr::rename(mapped, gene=gene_col))
     }
     log_str <- sprintf("%s\n\t\tAfter extraction, insufficient ids (n=%s)", log_str, max(overlap.lengths))

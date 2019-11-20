@@ -4,7 +4,8 @@
 \alias{parse_entrez_from_gpl}
 \title{Parse and map entrez data from a GPL annotation.}
 \usage{
-parse_entrez_from_gpl(gpl.name, ref_dir = NULL, MIN.OVERLAP = 8000)
+parse_entrez_from_gpl(gpl.name, ref_dir = NULL, MIN.OVERLAP = 8000,
+  verbose = TRUE)
 }
 \arguments{
 \item{gpl.name}{the name gpl to load}
@@ -12,6 +13,8 @@ parse_entrez_from_gpl(gpl.name, ref_dir = NULL, MIN.OVERLAP = 8000)
 \item{ref_dir}{optional reference directory, defaults to a temporary directory}
 
 \item{MIN.OVERLAP}{the minimum number of mapped genes allowed, default is 8000}
+
+\item{verbose}{print addition logging data if it fails, defaults to TRUE}
 }
 \value{
 a data frame with "probe" and "gene" columns, where gene is the entrezid

@@ -7,44 +7,58 @@
 #' @param gse the ID of the GSE to download
 #' @param to.ranks whether to convert to ranks, default is false
 #' @param gse.dir directory that contains gse files, if empty, will download the GSE
-#' @param ref.dir directory where GPL ref data is location, empty defaults to tempdir()
+#' @param gpl.dir directory where GPL ref data is location, empty defaults to tempdir()
 #' @param out.dir directory to write output, if empty will just be returned and not be written out
 #' @param gene_list the list of genes to use, this is helpful if you want to compare across multiple studies
 #'
 #' @return gene expression matrix, with rows as genes and columns as samples
-#'         values are gene expression levels unless converted to
+#'         values are gene expression levels unless converted to ranks
 getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
-                       ref.dir=NULL,
+                       gpl.dir=NULL,
                        out.dir=NULL,
                        gene_list=NULL){
 
   if (!is.null(gse.dir)){
     series.mat.f <- sprintf("%s/%s_series_matrix.txt.gz", gse.dir, gse)
     if (file.exists(series.mat.f)){
-      geo.obj <- MetaIntegrator::getGEOData(gse, filename = series.mat.f)
+      #geo.obj <- MetaIntegrator::getGEOData(gse, filename = series.mat.f)
+
+      geo.res <- GEOquery::getGEO(file=series.mat.f, getGPL=FALSE)[[1]]
     } else {
-      geo.obj <- MetaIntegrator::getGEOData(gse, destdir = gse.dir)
+      geo.res <- GEOquery::getGEO(gse, destdir=gse.dir, getGPL=FALSE)[[1]]
     }
   } else {
-    geo.obj <- MetaIntegrator::getGEOData(gse)
+    geo.res <- GEOquery::getGEO(gse, getGPL=FALSE)[[1]]
   }
-
-  # // TODO: check that the object downloaded
+  geo.obj <- list("expr"=Biobase::exprs(geo.res), "pheno"=Biobase::pData(geo.res), "platform"=unique(geo.res$platform))
 
   # // TODO work for multiple platforms??
-  if ((length(geo.obj$originalData)==0) |
-      (! "expr" %in% c(geo.obj$originalData[[1]])) |
-      (is.null(dim(geo.obj$originalData[[1]]$expr)))){
+
+
+  # check that the object downloaded
+  if ((is.null(dim(geo.obj$expr)))){
     print(sprintf("expression data is missing for %s", gse))
     return(NA)
   }
 
+  # log-transform if needed
+  if (! MetaIntegrator:::.GEM_log_check(geo.obj)){
+    min_value <- min(geo.obj$expr, na.rm = T)
+
+    if (min_value < 0) {
+      geo.obj$expr <- geo.obj$expr - min_value + 1
+    }
+
+    geo.obj$expr <- log2(geo.obj$expr)
+
+  }
+
   # grab platform and platform mapping
-  platform.id <- unique(geo.obj$originalData[[1]]$platform)
-  if (!is.null(ref.dir)){
-    gpl.f <- sprintf("%s/%s_map.RData", ref.dir, platform.id)
+  platform.id <- unique(geo.obj$platform)
+  if (!is.null(gpl.dir)){
+    gpl.f <- sprintf("%s/%s_map.RData", gpl.dir, platform.id)
     if (!file.exists(gpl.f)){
-      map_mult_gpl(c(platform.id), ref.dir)
+      map_mult_gpl(c(platform.id), gpl.dir)
     }
     load(gpl.f) # --> ref_tab
   } else {
@@ -59,7 +73,7 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
 
 
   # map to genes
-  exp_mat <- geo.obj$originalData[[1]]$expr
+  exp_mat <- geo.obj$expr
 
   gene_mat <- .convertGenes(exp_mat, ref_tab)
 
