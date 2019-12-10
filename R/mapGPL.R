@@ -65,7 +65,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
     org.name <- "rat"
   } else {
     print(sprintf("Error for %s, gpl key extraction is only implemented for human, rat, and mouse.",
-                  gpl_name))
+                  gpl.name))
     return(NA)
   }
 
@@ -387,7 +387,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
 .clean_mapping <- function(mapped){
   mapped2 <- unique(dplyr::select(mapped, gene, probe))
 
-  return(filter(mapped2, gene!="NA" & gene != "" & !is.na(gene) &
+  return(dplyr::filter(mapped2, gene!="NA" & gene != "" & !is.na(gene) &
                   probe!="NA" & probe != "" & !is.na(probe)))
 }
 

@@ -36,7 +36,7 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
 
 
   # check that the object downloaded
-  if ((is.null(dim(geo.obj$expr)))){
+  if ((is.null(dim(geo.obj$expr))) | (nrow(geo.obj$expr) < 1)){
     print(sprintf("expression data is missing for %s", gse))
     return(NA)
   }
