@@ -54,7 +54,7 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
   }
 
   # grab platform and platform mapping
-  platform.id <- unique(geo.obj$platform)
+  platform.id <- sapply(unique(geo.obj$platform), as.character)
   if (!is.null(gpl.dir)){
     gpl.f <- sprintf("%s/%s_map.RData", gpl.dir, platform.id)
     if (!file.exists(gpl.f)){
@@ -106,7 +106,7 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
                                           sapply(probe_gene$gene, as.character))
   # filter to remove hugely multi-mapping??
   gene.to.probe <- gene.to.probe[(sapply(gene.to.probe, length) < 15)]
-
+  gene.to.probe <- gene.to.probe[gene.to.probe %in% rownames(expData)]
   expData2 <- do.call(cbind, lapply(1:length(gene.to.probe), function(x) {
     # get the gene and the probe
     g <- names(gene.to.probe)[x]

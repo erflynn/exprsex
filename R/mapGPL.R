@@ -51,7 +51,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
 
   }, error = function(e) {
     print(sprintf("Error loading %s:", gpl.name))
-    print(error)
+    print(e)
     return(NA)
   })
 
