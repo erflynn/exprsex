@@ -34,9 +34,11 @@
 #' Take a list with probe to gene mapping and formate it as gene to probe mapping
 #'  In the process, separate out to allow for multi-mapping
 #'
-#' @param key.df a data frame with probe/gene mapping
+#' @param keys a list probe to gene
 #' @return list with gene to probe mapping, genes are names, probes
-.formatGeneProbe <- function(key.df){
+.formatGeneProbe <- function(keys){
+  keys <- keys[!is.null(keys)]
+  df <- data.frame(cbind("gene"=keys, "probe"=names(keys)))
   gene.to.probe <- split(key.df$probes,  key.df$gene)
   return(gene.to.probe)
 }
@@ -83,7 +85,13 @@
 #' @return expr_mat - an expression matrix with probes as genes
 .convertToGenes <- function(gse.obj, gene_list){
   expData <- gse.obj$expr
-  gene.to.probe <- .getGeneToProbe(gse.obj$platform, gse.obj$keys)
+  gene.to.probe <- exprsex:::.getGeneToProbe(gse.obj$platform, gse.obj$keys)
+
+  gene.to.probe <- split(sapply(probe_gene$probe, as.character),
+                         sapply(probe_gene$gene, as.character))
+  # filter to remove hugely multi-mapping??
+  gene.to.probe <- gene.to.probe[(sapply(gene.to.probe, length) < 15)]
+  gene.to.probe <- gene.to.probe[gene.to.probe %in% rownames(expData)]
 
   # TODO - if gene_list is null?
   if (!is.null(gene_list)){

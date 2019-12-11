@@ -22,7 +22,6 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
     series.mat.f <- sprintf("%s/%s_series_matrix.txt.gz", gse.dir, gse)
     if (file.exists(series.mat.f)){
       #geo.obj <- MetaIntegrator::getGEOData(gse, filename = series.mat.f)
-
       geo.res <- GEOquery::getGEO(file=series.mat.f, getGPL=FALSE)[[1]]
     } else {
       geo.res <- GEOquery::getGEO(gse, destdir=gse.dir, getGPL=FALSE)[[1]]
@@ -60,6 +59,7 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
     if (!file.exists(gpl.f)){
       map_mult_gpl(c(platform.id), gpl.dir)
     }
+    # // TODO what if mapping does not work
     load(gpl.f) # --> ref_tab
   } else {
     ref_tab <- parse_entrez_from_gpl(platform.id)

@@ -5,10 +5,10 @@
 \title{Take a list with probe to gene mapping and formate it as gene to probe mapping
  In the process, separate out to allow for multi-mapping}
 \usage{
-.formatGeneProbe(key.df)
+.formatGeneProbe(keys)
 }
 \arguments{
-\item{key.df}{a data frame with probe/gene mapping}
+\item{keys}{a list probe to gene}
 }
 \value{
 list with gene to probe mapping, genes are names, probes
