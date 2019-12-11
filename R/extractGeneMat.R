@@ -38,7 +38,7 @@
 #' @return list with gene to probe mapping, genes are names, probes
 .formatGeneProbe <- function(keys){
   keys <- keys[!is.null(keys)]
-  df <- data.frame(cbind("gene"=keys, "probe"=names(keys)))
+  key.df <- data.frame(cbind("gene"=keys, "probe"=names(keys)))
   gene.to.probe <- split(key.df$probes,  key.df$gene)
   return(gene.to.probe)
 }
