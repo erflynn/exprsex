@@ -39,7 +39,7 @@
 .formatGeneProbe <- function(keys){
   keys <- keys[!is.null(keys)]
   key.df <- data.frame(cbind("gene"=keys, "probe"=names(keys)))
-  gene.to.probe <- split(key.df$probes,  key.df$gene)
+  gene.to.probe <- split(key.df$probe,  key.df$gene)
   return(gene.to.probe)
 }
 
