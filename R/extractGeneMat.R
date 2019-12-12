@@ -39,7 +39,9 @@
 .formatGeneProbe <- function(keys){
   keys <- keys[!is.null(keys)]
   key.df <- data.frame(cbind("gene"=keys, "probe"=names(keys)))
-  gene.to.probe <- split(key.df$probe,  key.df$gene)
+  key.df <- key.df[key.df$gene!="NULL",]
+  gene.to.probe <- key.df$probe # // TODO may cause errors for multi-map
+  names(gene.to.probe) <- key.df$gene
   return(gene.to.probe)
 }
 
@@ -63,7 +65,7 @@
 
     # extract the keys and then convert it to a table
     keys <- gse_keys
-    if (is.null(gse_keys) | (length(keys[!is.na(keys)]) < 100)){
+    if (is.null(gse_keys) | (length(keys[!is.na(gse_keys)]) < 100)){
       keys <- .getGenes(platform, ref_dir)
     }
     gene.to.probe <- .formatGeneProbe(keys)
@@ -85,18 +87,16 @@
 #' @return expr_mat - an expression matrix with probes as genes
 .convertToGenes <- function(gse.obj, gene_list){
   expData <- gse.obj$expr
-  gene.to.probe <- exprsex:::.getGeneToProbe(gse.obj$platform, gse.obj$keys)
+  gene.to.probe <- .getGeneToProbe(gse.obj$platform, gse.obj$keys)
 
-  gene.to.probe <- split(sapply(probe_gene$probe, as.character),
-                         sapply(probe_gene$gene, as.character))
   # filter to remove hugely multi-mapping??
-  gene.to.probe <- gene.to.probe[(sapply(gene.to.probe, length) < 15)]
   gene.to.probe <- gene.to.probe[gene.to.probe %in% rownames(expData)]
+  gene.to.probe2 <- gene.to.probe[!is.na(names(gene.to.probe))]
 
   # TODO - if gene_list is null?
   if (!is.null(gene_list)){
     # filter for the genes in the gene_list
-    gene.to.probe <- gene.to.probe[gene_list]
+    gene.to.probe <- gene.to.probe[intersect(gene_list, names(gene.to.probe))]
   }
 
   expData2 <- do.call(cbind, lapply(1:length(gene.to.probe), function(x) {
@@ -119,7 +119,7 @@
   expData2.2 <- data.frame(t(expData2)) # columns are samples, rows are genes
 
   # create a data fram of NAs for missing genes
-  missing.genes <- setdiff(gene_list, list.keys)
+  missing.genes <- setdiff(gene_list, names(gene.to.probe))
   missing.vec <- rep(NA, ncol(expData2.2))
   missing.df <- do.call(rbind, lapply(1:length(missing.genes), function(x) missing.vec))
   rownames(missing.df) <- missing.genes
