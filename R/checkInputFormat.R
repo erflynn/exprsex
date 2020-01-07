@@ -23,7 +23,6 @@
   .my_assert("the expr_mat must be a matrix", class(expr_mat)=="matrix")
   # print an error if it is a data frame
   .my_assert("the expr_mat must contain only numeric values", is.numeric(expr_mat))
-  # TODO
   #   update to work for a data frame, which is.numeric will not evaluate to TRUE
 }
 
@@ -93,6 +92,8 @@
 #' @param probe_map list mapping from probes to genes, names are probes, values are genes
 #' @param gene_list list of all genes to extract
 .checkProbeMapping <- function(probe_mat, probe_map, gene_list){
+
+  # // TODO - update this!
 
   # throw an error if there is no intersection
   intersect_w_mat <- length(intersect(rownames(probe_mat), names(probe_map)))

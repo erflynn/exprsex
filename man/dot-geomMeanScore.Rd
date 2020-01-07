@@ -14,7 +14,7 @@
 \item{male_genes}{list of genes with male-specific expression}
 }
 \value{
-a vector of mean difference scores
+a list of geometric mean scores for males ("m") and females ("f")
 }
 \description{
 Relies on the psych package to calculate geometric means for each set of genes.

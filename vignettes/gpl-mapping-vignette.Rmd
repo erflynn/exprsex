@@ -1,0 +1,38 @@
+---
+title: "GPL Mapping Example"
+author: "E Flynn"
+date: "11/14/2019"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+*exprsex* uses the expression levels of selected genes to sex label data. In order to be able to do this across a wide range of platforms, which have inconsistent mapping, *exprsex* extracts probe to gene mapping from platform metadata, uses reference data from `biomaRt`, `mygene`, and other bioconductor packages to map these genes to their corresponding Entrez IDs. Currently *exprsex* can perform mapping for most mouse, rat, and human expression studies in Gene Expression Omnibus (GEO).
+
+```{r}
+require('exprsex')
+```
+
+
+If you just want to sex label a few datasets, go back to the `sex-label-vignette` and it will label them as you go.
+
+If you are running this for more than a few studies, we recommend setting up the reference tables ahead of time. Then you can reuse the reference tables and the mapping goes much more quickly! Note that this produces about 400 MB of data - so make sure you have the space. This should take about 5 minutes.
+```{r}
+# pick a reference directory to put this in
+REF.DIR <- "/Users/eflynn/Documents/EMILY/Stanford/Lab/AltmanLab/projects/labeling/gpl_ref/" #tempdir() # for this vignette we are just including a temporary directory (which is the default). We recommend changing this to the path that you want to use.  
+
+# run the code to generate all reference data
+# you can also specify what organisms you want. If you do not, it will download data for mouse, rat, and human 
+tic()
+generate_all_ref(ref_dir=REF.DIR, organisms=c("mouse", "rat", "human"))
+toc()
+```
+
+
+The approach I prefer now is to download all the GPLs I need so that I have them in one place. Then it makes it easier when I need to map a ton -- and I can pinpoint which ones produce errors.
+```{r}
+
+map_mult_gpl(c("GPL10332", "GPL9851", "GPL97", "GPL10295", "GPL6244"), REF.DIR, parallelize=FALSE)
+```

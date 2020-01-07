@@ -16,93 +16,191 @@ require('exprsex')
 ```
 
 
+Many gene expression studies are missing sex labels. Additionally, previous studies have shown that metadata sex labels frequently contain errors (Toker et al 2016). `exprsex` is a program for sex labeling microarray gene expression data that has high performance across a variety of platforms. 
 
-## Download a dataset and prepare for sex labeling
-You can download the dataset with whatever method you prefer. In the end, you need a vector for gene-to-probe mapping and the expression matrix.
-### Option 1: Download with MetaIntegrator
-```{r, warning=FALSE, message=FALSE}
-require('MetaIntegrator')
-gse <- getGEOData("GSE55668")
+Use cases:
+1. You have a dataset that you want to sex label with the default model.
+2. You have several similar datasets (e.g. same platform) and you want to train a more specific model on that dataset.
 
-# grab sex labels
-sex_lab <- gse$originalData$GSE55668$pheno$`Sex:ch1`
-
-# View the expression matrix and some of the key mappings
-head(gse$originalData$GSE55668$expr[,1:5])
-head(gse$originalData$GSE55668$keys[!is.na(gse$originalData$GSE55668$keys)]) 
-```
-
-The function `prepInput` is then used to summarize the probes to genes and convert to ranks.
+## Prepare for sex labeling: Download a dataset and convert it to genes
+`exprsex` includes the functionality for downloading a dataset from GEO, log-transforming if needed, finding the probe-to-gene mapping, and converting the data to genes. For more information on gene mapping, please go to the mapping vignette. 
 ```{r}
-exp_rank <- prepInput(gse$originalData$GSE55668$expr, gse$originalData$GSE55668$keys)
-head(exp_rank[,1:5])
+study1 <- getPrepGSE("GSE55668")
+study2 <- getPrepGSE("GSE48452")
+study3 <- getPrepGSE("GSE14323")
 ```
 
-### Option 2: Download with GEOquery
-When using GEOquery, we just have to run `createGSEObj` to convert the data.
-```{r, warning=FALSE, message=FALSE}
-require('GEOquery')
-gse2 <- getGEO("GSE55668")
-
-gse.obj2 <- createGSEObj(gse2)
-gse.obj2$sex_lab <- pData(gse2$GSE55668_series_matrix.txt.gz)$`Sex:ch1`
-
-```
-
-The next steps are all the same:
+Alternately, if you have a loaded expression dataset (e.g. already downloaded), you can provide it to the same method using the parameter `expr.mat`. 
 ```{r}
-gse.obj2 <- prepInput(gse.obj2) # list_genes?
-fit_g2 <- trainSexLab(gse.obj2$rank, gse.obj2$sex_lab)
-fit_g3predSexLab(fit_g2, gse.obj2$rank)
+# // TODO: LOAD THIS SOMEHOW
+# // TODO: where does the mapping come from?
+res <- prepFromExpr(my.dat, my.map, platform.id=NULL)
+# // TODO: write this method
 ```
 
+### Data Prep: Obtain and reformat sex labels
 
-## Reformat sex labels
-The sex labels in the study are present as Female/Male - we want them as 0 (f) and 1 (m), so they must be mapped.
-The end result is a vector with sex labels and the names of the vector are the sample IDs.
+Let's grab the labels and reformat them for easier use. `exprsex` allows for numeric sex labels (0="female" and 1="male"), or lowercase character labels (female/male). 
 ```{r}
-head(sex_lab)
-map_list <- list("Female"=0, "Male"=1)
-sex_lab_reform <- unlist(sapply(sex_lab, function(x) map_list[[x]]))
-names(sex_lab_reform) <- colnames(exp_rank)
-head(sex_lab_reform)
+# study 1 has sex labels with caps ("Female", "Male"), convert to lowercase
+sex_lab1 <- study1$GSE55668_series_matrix.txt.gz$pheno$`Sex:ch1`
+sex_lab1.2 <- unlist(sapply(sex_lab1, tolower))
+
+# study 2 has sex labels formatted as "Sex: ", so we remove this
+sex_lab2 <- study2$GSE48452_series_matrix.txt.gz$pheno$characteristics_ch1.6
+sex_lab2.2 <- sapply(sex_lab2, function(x) gsub("Sex: ", "", x))
+
+# study 3 has no metadata sex labels
 ```
 
-## Train a model using the provided data and models
-Fits include a sex of female-specific genes, male-specific genes, and a cutoff threshold. 
-The `trainSexLab` function uses the training data and labels to remove low-variance genes from a 
+
+## Sex labeling a dataset with defaults
+We can use default methods to sex label a dataset out of the box.
+We convert the expression matrix to ranks, and then can simply predict sex labels for the file. 
+```{r}
+## // TODO: fill in after pipeline - need this fit updated!
+
+# grab the gene expression matrix
+expr1 <- study1$GSE55668_series_matrix.txt.gz$gene_mat
+
+# add the "missing" rows to the expresion data that are in the gene list, # reorder the genes (this helps with comparison), and convert to ranks
+#expr1.r <- reorderRank(expr1) #// TODO this will not run until we have list.genes saved
+
+# predict sex labels
+#study1_preds <- predSexLab(default_fit, expr1.r, numeric_lab = FALSE)
+```
+
+We can compare these to the sex labels the dataset has and see that they have very good concordance!
+```{r}
+confMat <- function(actual, pred){
+  table(data.frame(cbind(actual, pred)))
+} # // TODO: make package function
+## // TODO: uncomment when next step works
+
+confMat(sex_lab1.2, study1_preds)
+```
+
+### Understanding and visualizing the results
+
+`exprsex` uses scores and a threshold score to classify. We can see these scores if we use another argument to `predSexLab`
+
+// TODO add equations
+```{r}
+# study1_pred_scores <- predSexLab(default_fit, expr1.r, numeric_lab = FALSE, scores=TRUE)
+# 
+# study1_res <- rbind(study1_pred_scores, "actual"=sex_lab1.2)
+# study1_df <- data.frame(t(study1_res))
+# study1_df$score_m <- sapply(study1_df$score_m, as.numeric)
+# study1_df$score_f <- sapply(study1_df$score_f, as.numeric)
+# 
+# # we can easily plot these scores
+# ggplot(data=study1_df, aes(x=score_f, y=score_m))+
+#   geom_point(aes(shape=actual, color=sex))
+```
+
+
+
+We can also visualize the results in other ways, looking at the actual values used for labeling (by setting the `ret_expr` flag to true).
+```{r, message=FALSE, warning=FALSE}
+
+study1_pred_scores2 <- predSexLab(fit_ex, expr1.r, numeric_lab = FALSE, scores=FALSE, ret_expr=TRUE)
+# this returns a matrix of m and f genes 
+
+# // TODO: move this to visualization methods
+# we can put these together and visualize the results in a PC plot
+comb <- rbind(study1_pred_scores2$f_mat, study1_pred_scores2$m_mat)
+comb2 <- comb[apply(comb, 1, function(x) !any(is.na(x))),]
+pcs <- prcomp(comb2)
+pc_df <- data.frame(cbind(pcs$rotation[,c("PC1", "PC2")], study1_pred_scores2$sl))
+pc_df$PC1 <- sapply(pc_df$PC1, as.numeric)
+pc_df$PC2 <- sapply(pc_df$PC2, as.numeric)
+colnames(pc_df)[3] <- "sex"
+
+ggplot(pc_df, aes(x=PC1, y=PC2))+
+  geom_point(aes(color=sex))
+
+# // TODO: update method to select specific genes for visualization
+# -- selects a subset of the genes in the fit that are X/Y
+#visualizeXYplot(expr1.r, actual=sex_lab1.2, pred=study1_preds)
+
+# // TODO: uncertainty threshold? need to work on methods
+
+# // TODO: look at the rest of the results
+```
+
+
+## Training a sex labeling model
+The default model from `exprsex` has high-performance across a variety of platforms; however, it is often useful to build more specific models for a particular platform or data type. 
+
+We have a couple options here:
+A) Use default male + female-specific gene sets
+B) Define our own gene sets
+
+
+### A: Train a model using the provided data and models
+Fits include a set of female-specific genes, male-specific genes, and a cutoff threshold. 
+The `trainSexLab` function uses the training data and labels to remove low-variance genes. Sex labels have to be numeric first. 
 ```{r, echo=FALSE, message=FALSE}
-fit_ex <- trainSexLab(exp_rank, sex_lab_reform)
+
+# convert to numeric
+sex_lab1.2num <- c(0,1)[as.factor(sex_lab1.2)] 
+sex_lab2.2num <- c(0,1)[as.factor(sex_lab2.2)] 
+
+names(sex_lab1.2num) <- colnames(exp_rank)
+fit_ex <- trainSexLab(expr1.r, sex_lab1.2num )
 
 # take a look at the fit
 str(fit_ex)
 ```
 
-## Predict sex labels using an existing fit
-Use a general t and run sex labeling.
-```{r}
-data(fit_all_train)
-# load and view a fit
-str(fit_all_train)
-
-# predict using existing fit
-sex_lab_f <- predSexLab(fit_all_train, exp_rank)
-head(sex_lab_f)
-```
+#### Predict sex labels using this fit
+Run sex labeling.
 
 Compare to the sex labels from the trained fit and the actual sex labels.
 ```{r}
 # predict using the new fit (warning: this fit was trained on the data!)
-sex_lab_t <- predSexLab(fit_ex, exp_rank)
-table(sex_lab_f==sex_lab_reform)
-table(sex_lab_t==sex_lab_reform)
+preds2 <- predSexLab(fit_ex, expr2.r)
+confMat(sex_lab2.2num,preds2)
+
+preds1 <- predSexLab(fit_ex, expr1.r)
+confMat(sex_lab1.2num, preds1)
+```
+
+### B: Identify gene sets and re-train models
+
+`exprsex` uses three sets of genes for sex labeling: a list of consensus genes across platform, and male + female-specific genes identified from a meta-analysis.
+
+#### Identify consensus genes
+We provide an existing list of consensus genes in `list.genes` but you can create your own based on a set of studies and use it to rank and reorder.
+```{r}
+list.dats <- list(study1, study2, study3)
+consensus.genes <- getConsensusGenes(list.dats)
+
+# // TODO - compare
+
+# --- now reorder using this --- #
+expr1 <- study1$GSE55668_series_matrix.txt.gz$gene_mat
+expr2 <- study2$GSE48452_series_matrix.txt.gz$gene_mat
+expr3.1 <- study3$`GSE14323-GPL571_series_matrix.txt.gz`$gene_mat
+expr3.2 <- study3$`GSE14323-GPL96_series_matrix.txt.gz`$gene_mat
+
+expr1.r2 <- reorderRank(expr1, gene_list=consensus.genes)
+expr2.r2 <- reorderRank(expr2, gene_list=consensus.genes)
+expr3.1r2 <- reorderRank(expr3.1, gene_list=consensus.genes)
+expr3.2r2 <- reorderRank(expr3.2, gene_list=consensus.genes)
+
 ```
 
 
-## Visualize the sex labels
-```{r, message=FALSE, warning=FALSE}
-# here we are grabbing the predicted sex labels
-visualizeXYplot(expData, gene_symbol_list, sex_lab_f)
+#### Male + female-specific genes
+For this case, we just choose to filter the genes by the consensus genes. 
+It is possible you may have another set of genes
+```{r}
+# // TODO - fill in
+
 ```
+
+
+
 
 

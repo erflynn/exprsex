@@ -33,10 +33,10 @@ runSexLab <- function(expr_mat, platform=NULL, is_rank=FALSE, numeric_lab=TRUE){
 
 #' Train a sex labeling classifier using input training data.
 #'
-#' @param train_dat training data frame - rows are genes (HGNC_symbol), columns are samples, values are ranks
+#' @param train_dat training data frame - rows are genes (entrez id), columns are samples, values are ranks
 #' @param train_lab named list of training labels - 0 for female, 1 for male
-#' @param female_genes a list of female-specific genes (HGNC_symbol), if not provided - default genes will be used
-#' @param male_genes a list of male-specific genes (HGNC_symbol), if not provided, default genes will be used
+#' @param female_genes a list of female-specific genes (entrez id), if not provided - default genes will be used
+#' @param male_genes a list of male-specific genes (entrez id), if not provided, default genes will be used
 #' @param cut_frac
 #'
 #' @return fit
@@ -44,7 +44,7 @@ trainSexLab <- function(train_dat, train_lab, female_genes = NULL, male_genes = 
                         cut_frac = "1st Qu.") {
   require('pROC')
 
-  # TODO:
+  # // TODO:
   # get rid of cut_frac
 
   .checkTrainInputFormat(train_dat, train_lab)
@@ -66,7 +66,8 @@ trainSexLab <- function(train_dat, train_lab, female_genes = NULL, male_genes = 
   f_genes <- .filterGenesByVar(train_dat, female_genes, cut_frac)
 
   # calculate scores for the training data
-  preds <- .geomMeanScore(train_dat, f_genes, m_genes)
+  scores <- .geomMeanScore(expr_mat, f_genes, m_genes) # calculate the score
+  preds <- scores$m - scores$f
   preds2 <- preds[!is.nan(preds)]
   labels <- train_lab[colnames(train_dat)][!is.nan(preds)]
 
@@ -80,11 +81,18 @@ trainSexLab <- function(train_dat, train_lab, female_genes = NULL, male_genes = 
 
 #' Use a particular sex labeling fit to label an input dataset
 #' @param fit a sex labeling fit object
-#' @param expr_mat data frame to label - rows are genes (HGNC_symbol), columns are samples, values are ranks
+#' @param expr_mat data frame to label - rows are genes, columns are samples, values are ranks
 #' @param numeric_lab if FALSE, the output is "female/male", otherwise it is numeric (0/1)
+#' @param scores whether to return the scores, defaults to FALSE
+#' @param ret_expr whether to return the expression values, defaults to FALSE
 #'
 #' @return sex_lab - a list of sex labels (0/1 or "female"/"male")
-predSexLab <- function(fit, expr_mat, numeric_lab = TRUE) {
+#'       if `scores` is specified, the result is a data.frame with columns for the f, m scores
+#'           and the sex label
+#'       if `ret_expr` is specified, a list is returned, "sl" are the sex labels (as list or df),
+#'          "f_mat" and "m_mat" contain the expression or ranks of the genes that go into the score
+predSexLab <- function(fit, expr_mat, numeric_lab = TRUE,
+                       scores=FALSE, ret_expr=FALSE) {
   require('pROC')
 
   # check input
@@ -102,15 +110,35 @@ predSexLab <- function(fit, expr_mat, numeric_lab = TRUE) {
   threshold_gpl <- fit$threshold
 
   # caclulate the score
-  preds_test <- .geomMeanScore(expr_mat, f_genes, m_genes) # calculate the score
+  scores_test <- .geomMeanScore(expr_mat, f_genes, m_genes) # calculate the score
+  preds_test <- scores_test$m - scores_test$f
   if (numeric_lab) {
     sex_lab <- ifelse(preds_test > threshold_gpl, 1, 0)
   } else {
     sex_lab <- ifelse(preds_test > threshold_gpl, "male", "female")
   }
 
-  # Add names to the list of sex labels
+  # add sample names to the list of sex labels
   names(sex_lab) <- colnames(expr_mat)
+
+  # add the scores to the output
+  if (scores){
+    scores_m <- scores_test$m
+    scores_f <- scores_test$f
+    names(sex_lab) <- NULL
+    df <- data.frame(do.call(rbind, list(sex_lab, scores_m, scores_f)))
+    colnames(df) <- colnames(expr_mat)
+    rownames(df) <- c("sex", "score_m", "score_f")
+    sex_lab <- df
+  }
+
+  # add the df chunks to the output
+  if (ret_expr){
+    f_mat <- expr_mat[f_genes,]
+    m_mat <- expr_mat[m_genes,]
+    return(list("sl"=sex_lab, "f_mat"=f_mat, "m_mat"=m_mat))
+  }
+
   return(sex_lab)
 }
 
@@ -172,13 +200,12 @@ predSexLab <- function(fit, expr_mat, numeric_lab = TRUE) {
 #' @param female_genes list of genes with female-specific expression
 #' @param male_genes list of genes with male-specific expression
 #'
-#' @return a vector of mean difference scores
+#' @return a list of geometric mean scores for males ("m") and females ("f")
 .geomMeanScore <- function(expr_mat, female_genes, male_genes) {
 
   mean_m <- .geomMeanAcrossGenes(expr_mat, male_genes)
   mean_f <- .geomMeanAcrossGenes(expr_mat, female_genes)
 
-  mean_diff <- mean_m - mean_f
-  return(mean_diff)
+  return(list( "f"=mean_f, "m"=mean_m))
 }
 

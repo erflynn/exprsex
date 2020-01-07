@@ -4,17 +4,26 @@
 \alias{predSexLab}
 \title{Use a particular sex labeling fit to label an input dataset}
 \usage{
-predSexLab(fit, expr_mat, numeric_lab = TRUE)
+predSexLab(fit, expr_mat, numeric_lab = TRUE, scores = FALSE,
+  ret_expr = FALSE)
 }
 \arguments{
 \item{fit}{a sex labeling fit object}
 
-\item{expr_mat}{data frame to label - rows are genes (HGNC_symbol), columns are samples, values are ranks}
+\item{expr_mat}{data frame to label - rows are genes, columns are samples, values are ranks}
 
 \item{numeric_lab}{if FALSE, the output is "female/male", otherwise it is numeric (0/1)}
+
+\item{scores}{whether to return the scores, defaults to FALSE}
+
+\item{ret_expr}{whether to return the expression values, defaults to FALSE}
 }
 \value{
 sex_lab - a list of sex labels (0/1 or "female"/"male")
+      if `scores` is specified, the result is a data.frame with columns for the f, m scores
+          and the sex label
+      if `ret_expr` is specified, a list is returned, "sl" are the sex labels (as list or df),
+         "f_mat" and "m_mat" contain the expression or ranks of the genes that go into the score
 }
 \description{
 Use a particular sex labeling fit to label an input dataset

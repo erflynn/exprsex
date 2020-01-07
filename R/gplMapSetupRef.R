@@ -72,8 +72,12 @@
                           returnall = TRUE)
 
   table(sapply(df_unigene$response[,"unigene"], is.null))
-  df_unigene$response$unigene <- sapply(df_unigene$response$unigene, function(x) paste(x, collapse=";"))
+  df_unigene$response$unigene <- sapply(df_unigene$response$unigene,
+                                        function(x) paste(x, collapse=";"))
+
+  # remove null entries
   my_df <- df_unigene$response[df_unigene$response$unigene!="",]
+
   unigene <- data.frame(my_df) %>%
     dplyr::select("query", "unigene") %>%
     dplyr::rename(entrezgene_id=query) %>%
@@ -104,10 +108,15 @@
 
   mapped_genes <- mappedkeys(x)
   xx <- as.list(x[mapped_genes])
+
+  # convert to a dataframe with one mapping per row
   collapsed <- lapply(xx, function(y) paste(unique(y), collapse=" /// "))
-  df <- data.frame(cbind("entrezgene_id"=names(xx), "genbank"=collapsed)  )
+  df <- data.frame(cbind("entrezgene_id"= names(xx), "genbank"=collapsed)  )
   rownames(df) <- NULL
-  return(tidyr::separate_rows(df, genbank, sep=" /// "))
+  df2 <- tidyr::separate_rows(df, genbank, sep=" /// ")
+  df2$entrezgene_id <- sapply(df2$entrezgene_id, unlist)
+
+  return(df2)
 }
 
 #' Gets a list of all entrez ids for an organism.
@@ -120,10 +129,9 @@
   library('dplyr') # for #%>%
   dat.map <- .load_ref(organism, "gene_map", ref_dir)
 
-  entrez_df <- dat.map %>% dplyr::filter(entrezgene_id != "") %>%
+  entrez_df <- dat.map %>% dplyr::filter(!is.na(entrezgene_id)) %>%
     dplyr::select(entrezgene_id) %>% unique()
-  entrezids <- sapply(entrez_df$entrezgene_id, as.character)
-  return(entrezids)
+  return(entrez_df)
 }
 
 #' Extract a gene mapping table from biomaRt, this contains ensembl, refseq, entrez ids
@@ -141,9 +149,16 @@
   } else {
     attribute_list <- c("ensembl_gene_id",  "refseq_mrna", "entrezgene_id",  "chromosome_name")
   }
-  gene_map <- biomaRt::getBM(attributes = attribute_list, mart=ensembl)
+  gene_map <- biomaRt::getBM(attributes=attribute_list, mart=ensembl)
+
+  # clean up the data
+  gene_map <- .cleanMapping(gene_map)
+  # note: we are retaining data with odd chromosome mapping
+
   return(gene_map)
 }
+
+
 
 #' Gets a table of all the X,Y genes for that organism with the entrez ids
 #'
@@ -192,6 +207,44 @@ generate_all_ref <- function(ref_dir=NULL, organisms=c("mouse", "rat", "human"))
     })
   })
 }
+
+
+# clean mappings
+.cleanMapping <- function(df){
+  # entrezids should be converted to characters
+  df <- .convertEntrez(df)
+  # missing data should be set up as "NA"s
+  df <- .convertNullChar(df)
+  # the data should be expanded out so that it is tidy
+  #df <- .checkExpandCol(df)
+  return(df)
+}
+
+# convert Entrez to character
+.convertEntrez <- function(df){
+  dplyr::mutate(df, entrezgene_id=as.character(entrezgene_id))
+}
+
+# convert alternate null characters to NAs
+.convertNullChar <- function(df){
+  df[df==""] <- NA
+  df[df=="NA"] <- NA
+  return(df)
+}
+
+# .checkExpandCol <- function(df){
+#
+#   check_slash <- apply(df, 2, function(col) any(str_detect(col, "//"), na.rm=TRUE))
+#   check_semi <- apply(df, 2, function(col) any(str_detect(col, ";"), na.rm=TRUE))
+#   if (any(check_slash)){
+#
+#   }
+#   if (any(check_semi)){
+#     # expand the column
+#     which(check_semi)
+#   }
+#   return(df)
+# }
 
 
 

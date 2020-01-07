@@ -1,96 +1,220 @@
 
 
-#' Get and prepare a gse file for sex labeling by converting it
-#' to genes. Optionally this will also reorder by a list of genes and
-#' convert it to ranks.
+#' Get and prepare a gse file for sex labeling by converting it to genes.
+#' Optionally this will also reorder by a list of genes and convert it to ranks.
 #'
 #' @param gse the ID of the GSE to download
-#' @param to.ranks whether to convert to ranks, default is false
 #' @param gse.dir directory that contains gse files, if empty, will download the GSE
 #' @param gpl.dir directory where GPL ref data is location, empty defaults to tempdir()
 #' @param out.dir directory to write output, if empty will just be returned and not be written out
-#' @param gene_list the list of genes to use, this is helpful if you want to compare across multiple studies
 #'
-#' @return gene expression matrix, with rows as genes and columns as samples
-#'         values are gene expression levels unless converted to ranks
-getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
-                       gpl.dir=NULL,
-                       out.dir=NULL,
-                       gene_list=NULL){
+#' @return list of gene expression matrices, with rows as genes and columns as samples
+#'         values are gene expression levels
+getPrepGSE <- function(gse, gse.dir=NULL,gpl.dir=NULL, out.dir=NULL){
+
 
   if (!is.null(gse.dir)){
     series.mat.f <- sprintf("%s/%s_series_matrix.txt.gz", gse.dir, gse)
     if (file.exists(series.mat.f)){
-      #geo.obj <- MetaIntegrator::getGEOData(gse, filename = series.mat.f)
-      geo.res <- GEOquery::getGEO(file=series.mat.f, getGPL=FALSE)[[1]]
+      geo.res <- GEOquery::getGEO(file=series.mat.f, getGPL=FALSE)
     } else {
-      geo.res <- GEOquery::getGEO(gse, destdir=gse.dir, getGPL=FALSE)[[1]]
+      geo.res <- GEOquery::getGEO(gse, destdir=gse.dir, getGPL=FALSE)
     }
   } else {
-    geo.res <- GEOquery::getGEO(gse, getGPL=FALSE)[[1]]
-  }
-  geo.obj <- list("expr"=Biobase::exprs(geo.res), "pheno"=Biobase::pData(geo.res), "platform"=unique(geo.res$platform))
-
-  # // TODO work for multiple platforms??
-
-
-  # check that the object downloaded
-  if ((is.null(dim(geo.obj$expr))) | (nrow(geo.obj$expr) < 1)){
-    print(sprintf("expression data is missing for %s", gse))
-    return(NA)
+    geo.res <- GEOquery::getGEO(gse, getGPL=FALSE)
   }
 
-  # log-transform if needed
-  if (! MetaIntegrator:::.GEM_log_check(geo.obj)){
-    min_value <- min(geo.obj$expr, na.rm = T)
 
-    if (min_value < 0) {
-      geo.obj$expr <- geo.obj$expr - min_value + 1
+  geo.obj.list <- lapply(geo.res, function(geo.plat) {
+    geo.obj <- list("expr"=Biobase::exprs(geo.plat), "pheno"=Biobase::pData(geo.plat),
+                    "platform"=unique(geo.plat$platform), "note"="")
+
+    # check that the object downloaded
+    if ((is.null(dim(geo.obj$expr))) | (nrow(geo.obj$expr) < 1)){
+      print(sprintf("expression data is missing for %s", gse))
+      return(NA)
     }
 
-    geo.obj$expr <- log2(geo.obj$expr)
+    # log-transform if needed
+    # // TODO: we rely on a hidden MetaIntegrator function to do this, update
+    if (! MetaIntegrator:::.GEM_log_check(geo.obj)){
+      min_value <- min(geo.obj$expr, na.rm = T)
 
-  }
+      # adjust up if the minimum value is less than zero
+      if (min_value < 0) {
+        geo.obj$expr <- geo.obj$expr - min_value + 1
+        geo.obj$note <- sprintf("%s; min val adjusted", geo.obj$note)
+      }
 
-  # grab platform and platform mapping
-  platform.id <- sapply(unique(geo.obj$platform), as.character)
-  if (!is.null(gpl.dir)){
-    gpl.f <- sprintf("%s/%s_map.RData", gpl.dir, platform.id)
-    if (!file.exists(gpl.f)){
-      map_mult_gpl(c(platform.id), gpl.dir)
+      # log-transform if needed
+      geo.obj$expr <- log2(geo.obj$expr)
+      geo.obj$note <- sprintf("%s; log2 transformed", geo.obj$note)
     }
-    # // TODO what if mapping does not work
-    load(gpl.f) # --> ref_tab
+
+    # grab platform and platform mapping
+    platform.id <- sapply(unique(geo.obj$platform), as.character)
+    if (!is.null(gpl.dir)){
+      gpl.f <- sprintf("%s/%s_map.RData", gpl.dir, platform.id)
+      if (!file.exists(gpl.f)){
+        map_mult_gpl(c(platform.id), gpl.dir)
+      }
+      miceadds::load.Rdata(gpl.f, "ref_tab")
+    } else {
+      ref_tab <- parse_entrez_from_gpl(platform.id, verbose=FALSE)
+    }
+
+    # return NA if the mapping does not exist
+    if (is.null(dim(ref_tab))){
+      print(sprintf("probe mapping data is missing for %s so we cannot map %s_%s",
+                    platform.id, gse, platform.id))
+      return(NA)
+    }
+
+    # map to genes
+    exp_mat <- geo.obj$expr
+    gene_mat <- .convertGenes(exp_mat, ref_tab)
+
+    # write out for sex labeling
+    # // TODO - should we include this?
+    if (!is.null(out.dir)){
+      write.table(gene_mat,
+                  file=sprintf("%s/%s_gene.txt", out.dir, gse),
+                  row.names=TRUE, quote=FALSE)
+    }
+    geo.obj2 <- geo.obj
+    geo.obj2$gene_mat <- gene_mat
+    return(geo.obj2)
+  })
+
+  return(geo.obj.list)
+
+}
+
+#' Prepare data from an existing expression matrix
+#'
+#' @param expr.mat expression matrix
+#' @param mapping.mat the matrix of, defaults to NULL
+#' @param to.genes whether the data needs to be converted to genes, defaults to FALSE
+#'        if this is TRUE, either the mapping matrix or platform.id need to be provided
+#' @param platform.id the platform ID, defaults to NULL
+#' @param gpl.dir directory where GPL ref data is location, empty defaults to tempdir()
+#' @param pheno pheno data frame to add if desired, defaults to NULL
+#'
+#' @return list of gene expression matrices, with rows as genes and columns as samples
+#'         values are gene expression levels
+prepFromExpr <- function(expr.mat, mapping.mat=NULL, to.genes=FALSE, platform.id=NULL, gpl.dir=NULL, pheno=NULL){
+
+  # // TODO: make sure the expression matrix is the correct format
+
+  geo.obj <- list()
+
+  # map to genes if this is required
+  if (!to.genes){
+    # warn if provide mapping data
+    if (!is.null(mapping.mat) | !is.null(platform.id)){
+      warning("You have provided a mapping matrix and/or platform id but specified not to convert the data to genes, so the data will remain as is.",
+              call.=FALSE)
+    }
+    gene_mat <- expr.mat
+
+
   } else {
-    ref_tab <- parse_entrez_from_gpl(platform.id)
+    geo.obj$expr <- expr.mat
+
+    # raise an error - we need something to map
+    .my_assert("Neither a platform id or mapping matrix is provided to map to genes",
+               is.null(mapping.mat) & is.null(platform.id))
+
+    if (!is.null(mapping.mat)){
+      # // TODO: make sure the mapping matrix is in the correct format
+      if (!is.null(platform.id)){
+        warning("You have provided a mapping matrix and a platform id, we will use the matrix.",
+                call.=FALSE)
+      }
+      ref_tab <- mapping.mat
+    } else {
+      # map based on the platform id
+
+      if (!is.null(gpl.dir)){
+        gpl.f <- sprintf("%s/%s_map.RData", gpl.dir, platform.id)
+        if (!file.exists(gpl.f)){
+          map_mult_gpl(c(platform.id), gpl.dir)
+        }
+        miceadds::load.Rdata(gpl.f, "ref_tab")
+      } else {
+        ref_tab <- parse_entrez_from_gpl(platform.id, verbose=FALSE)
+      }
+      # return NA if the mapping does not exist
+      if (is.null(dim(ref_tab))){
+        print("probe mapping data is missing so we cannot map")
+        return(NA)
+      }
+    }
+    gene_mat <- .convertGenes(expr.mat, ref_tab)
+
   }
-  # what to do if these data do not exist?
-  if (is.na(ref_tab)){
-    print(sprintf("probe mapping data is missing for %s so we cannot map %s",
-                  platform.id, gse))
-    return(NA)
-  }
+  geo.obj$gene_mat <- gene_mat
+  geo.obj$platform <- platform.id
+  geo.obj$pheno <- pheno
+
+  return(list(geo.obj))
+}
 
 
-  # map to genes
-  exp_mat <- geo.obj$expr
+#' Create a consensus gene list from a set of expression matrices.
+#' The goal of this function is to get a unified list of genes across studies.
+#'
+#' This consensus gene list can then be used for reordering and ranking a dataset.
+#'
+#' @param list.exprs the list of dataset objects from prepFromGSE or prepFromExpr
+#' @param min.fraction the fraction number of studies that we allow, defaults to 0.6
+#' @param min.genes the minimum number of genes that the studies need to contain to be considered
+#'   (if you use the package GPL mapping, it will already filter to a minimum threshold,
+#'   but use this to adjust further)
+#' @param na.max maximum NA fraction to keep a row, defaults to 0.3
+#'
+#' @return list of genes present in min.fraction of the studies
+getConsensusGenes <- function(list.dats, min.fraction=0.6, min.genes=8000, na.max=0.3){
 
-  gene_mat <- .convertGenes(exp_mat, ref_tab)
+  # // TODO: add input checks
+
+  gene.names <- sapply(list.dats, function(ds)
+    sapply(ds, function(d) {
+      if (length(d)==1){
+        return(NA)
+      }
+      expr <- d$gene_mat;
+      if (is.null(dim(expr)) | nrow(expr) < min.genes){
+        return(NA)
+      }
+      # remove rows with large numbers of NAs
+      na.counts <- apply(expr, 1, function(x) sum(is.na(x)))
+      expr2 <- expr[floor(na.counts/ncol(expr)) <= na.max,]
+      return(rownames(expr2))
+    }))
+
+  gene_counts <- table(unlist(gene.names))
+  gene.list <- names(gene_counts)[gene_counts > floor(min.fraction*length(list.dats))]
+
+  return(gene.list)
+}
+
+#' Reorder and rank a gene expression matrix. We then use this for sex labeling and comparison.
+#'
+#' @param gene_mat the expression matrix to reorder and rank
+#' @param gene_list the list of genes to use, this is helpful if you want to compare across multiple studies
+#' @param to.ranks whether to convert to ranks, default is TRUE
+#'
+#' @return expression matrix reordered based on the gene list, with expression converted to ranks
+reorderRank <- function(gene_mat, gene_list=list_genes, to.ranks=TRUE){
+  # re-order based on gene list
+  gene_mat2 <- .reorderGeneMat(gene_mat, gene_list)
 
   # convert to ranks
   if (to.ranks){
-    # // TODO
+    gene_mat2 <- .expDataToRanks(gene_mat2)
   }
-
-  # write out for sex labeling
-  if (!is.null(out.dir)){
-    write.table(gene_mat,
-                file=sprintf("%s/%s_gene.txt", out.dir, gse),
-                row.names=TRUE, quote=FALSE)
-  }
-  geo.obj2 <- geo.obj$originalData[[1]] # // TODO - does this work if mult platforms?
-  geo.obj2$expr_mat <- gene_mat
-  return(geo.obj2)
+  return(gene_mat2)
 }
 
 #' Convert the expression matrix to genes.
@@ -104,6 +228,7 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
 
   gene.to.probe <- split(sapply(probe_gene$probe, as.character),
                                           sapply(probe_gene$gene, as.character))
+
   # filter to remove hugely multi-mapping??
   gene.to.probe <- gene.to.probe[(sapply(gene.to.probe, length) < 15)]
   gene.to.probe <- gene.to.probe[gene.to.probe %in% rownames(expData)]
@@ -126,55 +251,44 @@ getPrepGSE <- function(gse, to.ranks=FALSE, gse.dir=NULL,
   colnames(expData2) <- names(gene.to.probe)
   expData2.2 <- data.frame(t(expData2)) # columns are samples, rows are genes
 
-  # // TODO: reordering?
   return(expData2.2)
 }
 
 
-#' Prepare the input data for sex labeling by converting it to genes
-#' and getting the ranks.
+
+#' Reorder the expression matrix so it contains the pre-specified list
+#' of genes and fill in missing data with NAs.
 #'
-#' @param gse.obj the object
+#' @param gene_mat the expression matrix to reorder
 #' @param gene_list the list of genes to use
-#' @return the gse.obj prepared for sex labeling
-prepInput <- function(gse.obj, gene_list=list_genes){
-  .checkExprMatFormat(gse.obj$expr)
-  .checkProbeMapping(gse.obj$expr, gse.obj$keys, gene_list)
+#'
+#' @return a reordered expression mat with NAs for missing genes
+.reorderGeneMat <- function(gene_mat, gene_list=list_genes){
+  # create a data frame of NAs for missing genes
+  missing.genes <- setdiff(gene_list, rownames(gene_mat))
+  missing.vec <- rep(NA, ncol(gene_mat))
+  missing.df <- do.call(rbind, lapply(1:length(missing.genes), function(x) missing.vec))
+  rownames(missing.df) <- missing.genes
+  colnames(missing.df) <- colnames(gene_mat)
 
-  if (!exists(gse.obj$exp_mat)){
-    gse.obj$exp_mat <- .convertToGenes(gse.obj, gene_list)
-  }
-  if (!exists(gse.obj$rank)){
-    gse.obj$rank <- .expDataToRanks(gse.obj$exp_mat)
-  }
-  return(gse.obj)
+  # put together and reorder
+  expDataPlusMiss <- rbind(gene_mat, missing.df )
+  gene_mat2 <- expDataPlusMiss[gene_list,]
+  return(gene_mat2)
 }
 
-#' Take a GEOQuery object and convert it to a MetaIntegrator gse.obj
+#' Convert an expression dataset to ranks.
 #'
-#' @param geoQueryObj that is the output of
-#' @return gse.obj with expression data and keys extracted
-createGSEObj <- function(geoQueryObj){
- gse.obj <- list()
- gse.obj$expr <- exprs(geoQueryObj)
- gse.obj$keys <- .parseKeysFromFData(fData(geoQueryObj))
- return(gse.obj)
+#' Briefly, takes an expression matrix, and then ranks each column, 1 to n (number of genes)
+#' in order of increasing expression values. Missing data is ranked last.
+#'
+#' @param gene_mat an expression matrix with genes as rows and columns as samples
+#'
+#' @return rank_dat ranked dataset
+.expDataToRanks <- function(gene_mat) {
+  rank_dat <- apply(gene_mat, 2, rank, na.last="keep") # keeps NAs as rank NA
+  return(rank_dat)
 }
 
 
-#' #' Prepare the input data for sex labeling.
-#' #'
-#' #' Alternate method for
-#' #'
-#' #' @param probe_mat an expression matrix with probes as rows and columns as samples
-#' #' @param probe_map list mapping from probes to genes, names are probes, values are genes
-#' #' @param gene_list list of all genes to extract, if not provided will use default list
-#' #' @return rank_dat ranked dataset with rows as genes
-#' prepInputProbe <- function(probe_mat, probe_map, gene_list=list_genes){
-#'   .checkExprMatFormat(probe_mat)
-#'   .checkProbeMapping(probe_mat, probe_map, gene_list)
-#'
-#'   expr_mat <- convertToGenes(probe_mat, probe_map, gene_list)
-#'   rank_dat <- .expDataToRanks(expr_mat)
-#' }
 

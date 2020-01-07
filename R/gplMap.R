@@ -362,7 +362,6 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
 
   }
 
-
   INTERNAL.SEP <-"///|//|,|\\|"
   SUFFIX.SEP <- "\\."
   probe.gene <- tidyr::separate_rows(probe.gene, genbank, sep=INTERNAL.SEP)
@@ -378,17 +377,13 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
 }
 
 
-# // TODO move this earlier
-
 #' Clean up the mapping output
 #'
 #' @param mapped a data frame of mapped data
 #' @return cleaned mapping with NAs/empty strings removed
 .clean_mapping <- function(mapped){
   mapped2 <- unique(dplyr::select(mapped, gene, probe))
-
-  return(dplyr::filter(mapped2, gene!="NA" & gene != "" & !is.na(gene) &
-                  probe!="NA" & probe != "" & !is.na(probe)))
+  return(dplyr::filter(mapped2, !is.na(gene) & !is.na(probe)))
 }
 
 

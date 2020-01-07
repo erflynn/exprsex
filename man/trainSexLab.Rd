@@ -8,13 +8,13 @@ trainSexLab(train_dat, train_lab, female_genes = NULL,
   male_genes = NULL, cut_frac = "1st Qu.")
 }
 \arguments{
-\item{train_dat}{training data frame - rows are genes (HGNC_symbol), columns are samples, values are ranks}
+\item{train_dat}{training data frame - rows are genes (entrez id), columns are samples, values are ranks}
 
 \item{train_lab}{named list of training labels - 0 for female, 1 for male}
 
-\item{female_genes}{a list of female-specific genes (HGNC_symbol), if not provided - default genes will be used}
+\item{female_genes}{a list of female-specific genes (entrez id), if not provided - default genes will be used}
 
-\item{male_genes}{a list of male-specific genes (HGNC_symbol), if not provided, default genes will be used}
+\item{male_genes}{a list of male-specific genes (entrez id), if not provided, default genes will be used}
 
 \item{cut_frac}{}
 }
