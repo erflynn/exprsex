@@ -12,19 +12,25 @@
 #'         values are gene expression levels
 getPrepGSE <- function(gse, gse.dir=NULL,gpl.dir=NULL, out.dir=NULL){
 
-
+  # if there is a prespecified directory
   if (!is.null(gse.dir)){
-    series.mat.f <- sprintf("%s/%s_series_matrix.txt.gz", gse.dir, gse)
-    if (file.exists(series.mat.f)){
-      geo.res <- GEOquery::getGEO(file=series.mat.f, getGPL=FALSE)
-    } else {
+    # look for files in the directory
+    series.f <- list.files(gse.dir, pattern=sprintf("%s[-|_]*", gse))
+    if (length(series.f) > 0){
+      geo.res <- lapply(series.f, function(f.name){
+        geo.plat <- GEOquery::getGEO(file=sprintf("%s/%s", gse.dir, f.name), getGPL=FALSE)
+      })
+      names(geo.res) <- series.f
+    }
+    # if they aren't there, then load the study but save it to the directory
+    else {
       geo.res <- GEOquery::getGEO(gse, destdir=gse.dir, getGPL=FALSE)
     }
   } else {
     geo.res <- GEOquery::getGEO(gse, getGPL=FALSE)
   }
 
-
+  # go through the geo obj (multiple if there is more than one platform for a study)
   geo.obj.list <- lapply(geo.res, function(geo.plat) {
     geo.obj <- list("expr"=Biobase::exprs(geo.plat), "pheno"=Biobase::pData(geo.plat),
                     "platform"=unique(geo.plat$platform), "note"="")
