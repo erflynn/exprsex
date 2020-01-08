@@ -64,7 +64,11 @@ getPrepGSE <- function(gse, gse.dir=NULL,gpl.dir=NULL, out.dir=NULL){
       if (!file.exists(gpl.f)){
         map_mult_gpl(c(platform.id), gpl.dir)
       }
-      miceadds::load.Rdata(gpl.f, "ref_tab")
+      if (file.exists(gpl.f)){
+        miceadds::load.Rdata(gpl.f, "ref_tab")
+      } else {
+        ref_tab <- NA
+      }
     } else {
       ref_tab <- parse_entrez_from_gpl(platform.id, verbose=FALSE)
     }
