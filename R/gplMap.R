@@ -56,7 +56,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
   })
 
   # check the organism
-  organism <- gpl@header$taxid
+  organism <- paste(gpl@header$taxid, collapse=";")
   if (stringr::str_detect(organism, "9606")){
     org.name <- "human"
   } else if (stringr::str_detect(organism, "10090")){
@@ -320,9 +320,12 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
 
   if (organism=="rat"){
     print("error no HGNC symbol mapping for rat")
-    return(NA)
+    return(data.frame("gene"=c(), "probe"=c()))
   }
   probe.gene <- .find_col_loc(gpl.df, my.col, "GAPDH|gapdh|Gapdh")
+  if (nrow(probe.gene)==0){
+    return(data.frame("gene"=c(), "probe"=c()))
+  }
   colnames(probe.gene) <- c("probe", "hgnc_symbol")
   gene_map <- .load_ref(organism, "hgnc", ref_dir)
 

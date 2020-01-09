@@ -191,9 +191,10 @@
   lst_fields <- stringr::str_split(mult_fields, "//")
   idces <- lapply(lst_fields, function(x)
     which(sapply(x, function(y)
-      stringr::str_detect(stringr::str_trim(y), sprintf("^%s", ex.str)))))
+      stringr::str_detect(stringr::str_trim(y), sprintf("^%s", ex.str,ex.str)))))
+  # problem -- getting "Human GAPDH"
 
-  if (length(idces)==0){
+  if (length(unlist(idces))==0){
     # should we try different IDs?
     print("error in identifying within column location")
     return(data.frame("gene"=c(), "probe"=c()))
