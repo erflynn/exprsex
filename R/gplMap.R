@@ -127,10 +127,18 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
   genbank_col <- .detect_genbank_cols_name(gpl@dataTable@columns)
   if (length(genbank_col) != 0){
     # TODO - do this differently if this is a genbank column...
-    log_str <- sprintf("%s\n\tFound genbank column by name %s", log_str, paste(genbank_col, collapse=";"))
 
-    mapped <- .map_from_genbank(gpl.df, genbank_col, org.name,
-                                ref_dir, col.given=TRUE)
+    mappings <- lapply(genbank_col, function(my_col){
+        log_str <- sprintf("%s\n\tFound genbank column by name %s", log_str, paste(genbank_col, collapse=";"))
+        mapped <- .map_from_genbank(gpl.df, my_col, org.name, ref_dir, col.given=TRUE)
+        return(mapped)
+      })
+    if (length(mappings) > 1){
+        mapped <- mappings[which.max(lapply(mappings, nrow))]
+      } else {
+        mapped <- mappings[[1]]
+      }
+
     if (length(unique(mapped$gene)) > MIN.OVERLAP ){
       print(sprintf("parsed %s from GenBank", gpl.name))
       return(mapped)
@@ -139,8 +147,19 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
   }
   genbank_col <- .detect_genbank_cols(gpl.df, org.name)
   if (length(genbank_col) != 0){
-    log_str <- sprintf("%s\n\tFound genbank ids in a column %s", log_str,  paste(genbank_col, collapse=";"))
-    mapped <- .map_from_genbank(gpl.df, genbank_col, org.name, ref_dir, col.given=FALSE)
+    # TODO - do this differently if this is a genbank column...
+
+    mappings <- lapply(genbank_col, function(my_col){
+      log_str <- sprintf("%s\n\tFound genbank column by name %s", log_str, paste(genbank_col, collapse=";"))
+      mapped <- .map_from_genbank(gpl.df, my_col, org.name, ref_dir, col.given=FALSE)
+      return(mapped)
+    })
+    if (length(mappings) > 1){
+      mapped <- mappings[which.max(lapply(mappings, nrow))]
+    } else {
+      mapped <- mappings[[1]]
+    }
+
     if (length(unique(mapped$gene)) > MIN.OVERLAP ){
       print(sprintf("parsed %s from GenBank", gpl.name))
       return(mapped)

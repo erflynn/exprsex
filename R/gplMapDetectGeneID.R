@@ -167,7 +167,10 @@
 
   # find example row
   ex_rows <- which(stringr::str_detect(df[,my.col], ex.str))
-
+  if (length(ex_rows) == 0){
+    print("No mentions of this string in the column")
+    return(data.frame("gene"=c(), "probe"=c()))
+  }
   my.row <- ex_rows[[1]]
 
   if (check.overlap & !is.null(id.list)){
