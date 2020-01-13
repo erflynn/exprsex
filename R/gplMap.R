@@ -255,7 +255,11 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
   # check that it matches the whole column -- if not, parse
   library(dplyr) # for pipe
   probe.gene <- .find_col_loc(gpl.df, my.col, "N[R|M][_][\\d]+[_.-]*[\\w\\d]*")
+  if (nrow(probe.gene)==0){
+    return(probe.gene)
+  }
   colnames(probe.gene) <- c("probe", "refseq_mrna")
+
   gene_map <- .load_ref(organism, "refseq", ref_dir)
   ref_entr <- gene_map %>%
     dplyr::select(refseq_mrna, entrezgene_id) %>%

@@ -169,7 +169,7 @@
   ex_rows <- which(stringr::str_detect(df[,my.col], ex.str))
   if (length(ex_rows) == 0){
     print("No mentions of this string in the column")
-    return(data.frame("gene"=c(), "probe"=c()))
+    return(data.frame("gene"=character(), "probe"=character()))
   }
   my.row <- ex_rows[[1]]
 
@@ -200,7 +200,7 @@
   if (length(unlist(idces))==0){
     # should we try different IDs?
     print("error in identifying within column location")
-    return(data.frame("gene"=c(), "probe"=c()))
+    return(data.frame("gene"=character(), "probe"=character()))
   }
 
   # find the location
