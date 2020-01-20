@@ -12,22 +12,39 @@
 #'         values are gene expression levels
 getPrepGSE <- function(gse, gse.dir=NULL,gpl.dir=NULL, out.dir=NULL){
 
-  # if there is a prespecified directory
-  if (!is.null(gse.dir)){
-    # look for files in the directory
-    series.f <- list.files(gse.dir, pattern=sprintf("%s[-|_]*", gse))
-    if (length(series.f) > 0){
-      geo.res <- lapply(series.f, function(f.name){
-        geo.plat <- GEOquery::getGEO(file=sprintf("%s/%s", gse.dir, f.name), getGPL=FALSE)
+  geo.res <- NULL
+    # if there is a prespecified directory
+    if (!is.null(gse.dir)){
+      # look for files in the directory
+      series.f <- list.files(gse.dir, pattern=sprintf("%s[-|_]*", gse))
+      if (length(series.f) > 0){
+        geo.res <- lapply(series.f, function(f.name){
+          geo.plat <- GEOquery::getGEO(file=sprintf("%s/%s", gse.dir, f.name), getGPL=FALSE)
+        })
+        names(geo.res) <- series.f
+      }
+      # if they aren't there, then load the study but save it to the directory
+      else {
+        tryCatch({
+          geo.res <- GEOquery::getGEO(gse, destdir=gse.dir, getGPL=FALSE)
+        }, err = function(e){
+          print(sprintf("%s error loading", gse))
+          return(NULL)
+        })
+      }
+    } else {
+      tryCatch({
+        geo.res <- GEOquery::getGEO(gse, getGPL=FALSE)
+      }, err = function(e){
+        print(sprintf("%s error loading", gse))
+        return(NULL)
       })
-      names(geo.res) <- series.f
     }
-    # if they aren't there, then load the study but save it to the directory
-    else {
-      geo.res <- GEOquery::getGEO(gse, destdir=gse.dir, getGPL=FALSE)
-    }
-  } else {
-    geo.res <- GEOquery::getGEO(gse, getGPL=FALSE)
+
+
+  if (is.null(geo.res)){
+    print(sprintf("No data for %s", gse))
+    return(NULL)
   }
 
   # go through the geo obj (multiple if there is more than one platform for a study)
@@ -187,6 +204,7 @@ prepFromExpr <- function(expr.mat, mapping.mat=NULL, to.genes=FALSE, platform.id
 getConsensusGenes <- function(list.dats, min.fraction=0.6, min.genes=8000, na.max=0.3){
 
   # // TODO: add input checks
+  num.studies <- 0
 
   gene.names <- sapply(list.dats, function(ds)
     sapply(ds, function(d) {
@@ -200,11 +218,12 @@ getConsensusGenes <- function(list.dats, min.fraction=0.6, min.genes=8000, na.ma
       # remove rows with large numbers of NAs
       na.counts <- apply(expr, 1, function(x) sum(is.na(x)))
       expr2 <- expr[floor(na.counts/ncol(expr)) <= na.max,]
+      num.studies <- num.studies + 1
       return(rownames(expr2))
     }))
 
   gene_counts <- table(unlist(gene.names))
-  gene.list <- names(gene_counts)[gene_counts > floor(min.fraction*length(list.dats))]
+  gene.list <- names(gene_counts)[gene_counts > floor(min.fraction*num.studies)]
 
   return(gene.list)
 }
