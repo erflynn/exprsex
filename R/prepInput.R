@@ -204,7 +204,6 @@ prepFromExpr <- function(expr.mat, mapping.mat=NULL, to.genes=FALSE, platform.id
 getConsensusGenes <- function(list.dats, min.fraction=0.6, min.genes=8000, na.max=0.3){
 
   # // TODO: add input checks
-  num.studies <- 0
 
   gene.names <- sapply(list.dats, function(ds)
     sapply(ds, function(d) {
@@ -218,11 +217,12 @@ getConsensusGenes <- function(list.dats, min.fraction=0.6, min.genes=8000, na.ma
       # remove rows with large numbers of NAs
       na.counts <- apply(expr, 1, function(x) sum(is.na(x)))
       expr2 <- expr[floor(na.counts/ncol(expr)) <= na.max,]
-      num.studies <- num.studies + 1
       return(rownames(expr2))
     }))
 
-  gene_counts <- table(unlist(gene.names))
+  gene.names2 <- gene.names[!is.na(gene.names)]
+  num.studies <- length(gene.names2)
+  gene_counts <- table(unlist(gene.names2))
   gene.list <- names(gene_counts)[gene_counts > floor(min.fraction*num.studies)]
 
   return(gene.list)
