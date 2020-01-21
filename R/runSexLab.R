@@ -66,7 +66,7 @@ trainSexLab <- function(train_dat, train_lab, female_genes = NULL, male_genes = 
   f_genes <- .filterGenesByVar(train_dat, female_genes, cut_frac)
 
   # calculate scores for the training data
-  scores <- .geomMeanScore(expr_mat, f_genes, m_genes) # calculate the score
+  scores <- .geomMeanScore(train_dat, f_genes, m_genes) # calculate the score
   preds <- scores$m - scores$f
   preds2 <- preds[!is.nan(preds)]
   labels <- train_lab[colnames(train_dat)][!is.nan(preds)]
