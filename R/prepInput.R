@@ -254,13 +254,17 @@ reorderRank <- function(gene_mat, gene_list=list_genes, to.ranks=TRUE){
 #' @return an expression matrix with genes as rows
 .convertGenes <- function(expData, probe_gene){
   .checkExprMatFormat(expData) # other input checks?
+  probe_gene <- probe_gene[probe_gene$gene !="" & probe_gene$probe !="",]
+  probe_gene$gene <- sapply(probe_gene$gene, as.character)
+  probe_gene$probe <- sapply(probe_gene$probe, as.character)
 
-  gene.to.probe <- split(sapply(probe_gene$probe, as.character),
-                                          sapply(probe_gene$gene, as.character))
+  probe_gene2 <- dplyr::filter(probe_gene, probe %in% rownames(expData))
+
+  gene.to.probe <- split(probe_gene2$probe, probe_gene2$gene)
 
   # filter to remove hugely multi-mapping??
-  gene.to.probe <- gene.to.probe[(sapply(gene.to.probe, length) < 15)]
-  gene.to.probe <- gene.to.probe[gene.to.probe %in% rownames(expData)]
+
+
   expData2 <- do.call(cbind, lapply(1:length(gene.to.probe), function(x) {
     # get the gene and the probe
     g <- names(gene.to.probe)[x]
