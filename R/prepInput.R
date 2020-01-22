@@ -16,7 +16,7 @@ getPrepGSE <- function(gse, gse.dir=NULL,gpl.dir=NULL, out.dir=NULL){
     # if there is a prespecified directory
     if (!is.null(gse.dir)){
       # look for files in the directory
-      series.f <- list.files(gse.dir, pattern=sprintf("%s[-|_]*", gse))
+      series.f <- list.files(gse.dir, pattern=sprintf("%s[-|_]+", gse))
       if (length(series.f) > 0){
         geo.res <- lapply(series.f, function(f.name){
           geo.plat <- GEOquery::getGEO(file=sprintf("%s/%s", gse.dir, f.name), getGPL=FALSE)

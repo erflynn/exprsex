@@ -129,7 +129,7 @@ predSexLab <- function(fit, expr_mat, numeric_lab = TRUE,
     df <- data.frame(do.call(rbind, list(sex_lab, scores_m, scores_f)))
     colnames(df) <- colnames(expr_mat)
     rownames(df) <- c("sex", "score_m", "score_f")
-    sex_lab <- df
+    sex_lab <- data.frame(t(df))
   }
 
   # add the df chunks to the output
