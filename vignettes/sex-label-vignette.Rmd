@@ -60,6 +60,7 @@ expr1 <- study1$GSE55668_series_matrix.txt.gz$gene_mat
 expr1.r <- reorderRank(expr1) 
 
 # predict sex labels
+data(default_fit)
 study1_preds <- predSexLab(default_fit, expr1.r, numeric_lab = FALSE)
 ```
 
