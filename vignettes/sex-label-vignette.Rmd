@@ -16,27 +16,20 @@ require('exprsex')
 ```
 
 
-Many gene expression studies are missing sex labels. Additionally, previous studies have shown that metadata sex labels frequently contain errors (Toker et al 2016). `exprsex` is a program for sex labeling microarray gene expression data that has high performance across a variety of platforms. 
+Many gene expression studies are missing sex labels. Additionally, previous studies have shown that metadata sex labels frequently contain errors (Toker et al 2016); however, previous expression-based methods are limited to large mixed sex studies. `exprsex` is a program for sex labeling microarray gene expression data that has high performance across a variety of platforms and sample sizes. 
 
 Use cases:
 1. You have a dataset that you want to sex label with the default model.
 2. You have several similar datasets (e.g. same platform) and you want to train a more specific model on that dataset.
 
 ## Prepare for sex labeling: Download a dataset and convert it to genes
-`exprsex` includes the functionality for downloading a dataset from GEO, log-transforming if needed, finding the probe-to-gene mapping, and converting the data to genes. For more information on gene mapping, please go to the mapping vignette. 
+`exprsex` includes the functionality for downloading a dataset from GEO, log-transforming if needed, finding the probe-to-gene mapping, and converting the data to genes. For more information on gene mapping, please go to the mapping vignette. Note that this step is slow because it includes gene mapping.
 ```{r}
-study1 <- getPrepGSE("GSE55668")
+study1 <- getPrepGSE("GSE55668", gpl.dir = "../../gpl_ref/")
 study2 <- getPrepGSE("GSE48452")
 study3 <- getPrepGSE("GSE14323")
 ```
 
-Alternately, if you have a loaded expression dataset (e.g. already downloaded), you can provide it to the same method using the parameter `expr.mat`. 
-```{r}
-# // TODO: LOAD THIS SOMEHOW
-# // TODO: where does the mapping come from?
-res <- prepFromExpr(my.dat, my.map, platform.id=NULL)
-# // TODO: write this method
-```
 
 ### Data Prep: Obtain and reformat sex labels
 
@@ -58,44 +51,43 @@ sex_lab2.2 <- sapply(sex_lab2, function(x) gsub("Sex: ", "", x))
 We can use default methods to sex label a dataset out of the box.
 We convert the expression matrix to ranks, and then can simply predict sex labels for the file. 
 ```{r}
-## // TODO: fill in after pipeline - need this fit updated!
 
 # grab the gene expression matrix
 expr1 <- study1$GSE55668_series_matrix.txt.gz$gene_mat
 
-# add the "missing" rows to the expresion data that are in the gene list, # reorder the genes (this helps with comparison), and convert to ranks
-#expr1.r <- reorderRank(expr1) #// TODO this will not run until we have list.genes saved
+# add the "missing" rows to the expresion data that are in the gene list, 
+# reorder the genes (this helps with comparison), and convert to ranks
+expr1.r <- reorderRank(expr1) 
 
 # predict sex labels
-#study1_preds <- predSexLab(default_fit, expr1.r, numeric_lab = FALSE)
+study1_preds <- predSexLab(default_fit, expr1.r, numeric_lab = FALSE)
 ```
 
 We can compare these to the sex labels the dataset has and see that they have very good concordance!
 ```{r}
 confMat <- function(actual, pred){
   table(data.frame(cbind(actual, pred)))
-} # // TODO: make package function
-## // TODO: uncomment when next step works
+} 
 
 confMat(sex_lab1.2, study1_preds)
 ```
 
 ### Understanding and visualizing the results
 
-`exprsex` uses scores and a threshold score to classify. We can see these scores if we use another argument to `predSexLab`
+`exprsex` uses scores and a threshold score to classify. We can see these scores if we use another argument to `predSexLab`:
 
 // TODO add equations
 ```{r}
-# study1_pred_scores <- predSexLab(default_fit, expr1.r, numeric_lab = FALSE, scores=TRUE)
-# 
-# study1_res <- rbind(study1_pred_scores, "actual"=sex_lab1.2)
-# study1_df <- data.frame(t(study1_res))
-# study1_df$score_m <- sapply(study1_df$score_m, as.numeric)
-# study1_df$score_f <- sapply(study1_df$score_f, as.numeric)
-# 
-# # we can easily plot these scores
-# ggplot(data=study1_df, aes(x=score_f, y=score_m))+
-#   geom_point(aes(shape=actual, color=sex))
+study1_pred_scores <- predSexLab(default_fit, expr1.r, numeric_lab = FALSE, scores=TRUE)
+
+study1_res <- rbind(study1_pred_scores, "actual"=sex_lab1.2)
+study1_df <- data.frame(t(study1_res))
+study1_df$score_m <- sapply(study1_df$score_m, as.numeric)
+study1_df$score_f <- sapply(study1_df$score_f, as.numeric)
+
+# we can easily plot these scores
+ggplot(data=study1_df, aes(x=score_f, y=score_m))+
+  geom_point(aes(shape=actual, color=sex))
 ```
 
 
@@ -119,13 +111,6 @@ colnames(pc_df)[3] <- "sex"
 ggplot(pc_df, aes(x=PC1, y=PC2))+
   geom_point(aes(color=sex))
 
-# // TODO: update method to select specific genes for visualization
-# -- selects a subset of the genes in the fit that are X/Y
-#visualizeXYplot(expr1.r, actual=sex_lab1.2, pred=study1_preds)
-
-# // TODO: uncertainty threshold? need to work on methods
-
-# // TODO: look at the rest of the results
 ```
 
 
@@ -171,7 +156,7 @@ confMat(sex_lab1.2num, preds1)
 `exprsex` uses three sets of genes for sex labeling: a list of consensus genes across platform, and male + female-specific genes identified from a meta-analysis.
 
 #### Identify consensus genes
-We provide an existing list of consensus genes in `list.genes` but you can create your own based on a set of studies and use it to rank and reorder.
+We provide an existing list of consensus genes in `list_genes` but you can create your own based on a set of studies and use it to rank and reorder.
 ```{r}
 list.dats <- list(study1, study2, study3)
 consensus.genes <- getConsensusGenes(list.dats)

@@ -5,3 +5,8 @@
 #' are provided.
 "sex_lab_genes"
 
+#' Default fit for sex labeling.
+#'
+#' A list containing the "f" and "m" sex_lab genes and the default threshold.
+#' This was trained with using mixed sex data from a wide range of platforms.
+"default_fit"
