@@ -18,7 +18,11 @@ To run:
          `fit <- trainSexLab(expr, sex_lab)`
      * Or run sex labeling:
          `predSexLab(fit, expr)`
+         the default fit can be accessed with `data(default_fit)`
 
-Sex labeling genes are from ISEXs (Bongen et al., in preparation). 
+For a full example, see `vignettes/sex-label-vignette.Rmd`.
 
+We also provide code to map a wide range of GEO platforms to entrez IDs in `gpl_map()` functions.
+This is done as part of the `getPrepGSE` function. To map an individual platform:
+ `ref_tab <- parse_entrez_from_gpl(platform_id)`
 
