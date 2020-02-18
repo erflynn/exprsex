@@ -8,7 +8,7 @@
                              gpl_cols$Column, ignore.case = TRUE))
   entrez.col2 <- which(grepl("entrez",
                              gpl_cols$Description, ignore.case = TRUE))
-  entrez.col <- unique(entrez.col1, entrez.col2)
+  entrez.col <- unique(c(entrez.col1, entrez.col2))
   return(entrez.col)
 }
 
@@ -173,6 +173,8 @@
   }
   my.row <- ex_rows[[1]]
 
+  # // TODO - what if id.list is NULL?
+  idces <- c()
   if (check.overlap & !is.null(id.list)){
     i <- 1
     while(i < length(ex_rows)){
@@ -181,22 +183,32 @@
       tokens2 <- tokens[stringr::str_length(tokens) >4]
       tokens3 <- intersect(tokens2, id.list)
       if (length(tokens3) > 0){
-        ex.str <- tokens3[[1]]
-        i <- length(ex_rows) # break out of the loop because we have found an example!
+        ex.str <- tokens3[[1]] # // if multiple, try to find one that makes most sense
+        my_str <- df[my.row, my.col]
+        mult_fields <- stringr::str_trim(stringr::str_split(my_str, "///")[[1]])
+        lst_fields <- stringr::str_split(mult_fields, "//")
+        idces <- lapply(lst_fields, function(x)
+          which(sapply(x, function(y)
+            stringr::str_detect(stringr::str_trim(y), sprintf("^%s", ex.str, ex.str)))))
+        if (length(tokens3) == 1){
+          # split into fields
+          if (length(unlist(idces))!=0){
+            i <- length(ex_rows) # break out of the loop because we have found an example!
+          }
+        }
       }
       i <- i+1
     }
   }
   my_str <- df[my.row, my.col]
-
-  # split into fields
   mult_fields <- stringr::str_trim(stringr::str_split(my_str, "///")[[1]])
   lst_fields <- stringr::str_split(mult_fields, "//")
   idces <- lapply(lst_fields, function(x)
     which(sapply(x, function(y)
-      stringr::str_detect(stringr::str_trim(y), sprintf("^%s", ex.str,ex.str)))))
-  # problem -- getting "Human GAPDH"
+      stringr::str_detect(stringr::str_trim(y), sprintf("^%s", ex.str, ex.str)))))
 
+
+  # problem -- getting "Human GAPDH"
   if (length(unlist(idces))==0){
     # should we try different IDs?
     print("error in identifying within column location")

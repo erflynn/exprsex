@@ -116,7 +116,7 @@ parse_entrez_from_gpl <- function(gpl.name, ref_dir=NULL, MIN.OVERLAP=8000, verb
     if (max(overlap.lengths) > MIN.OVERLAP){
       entrez.col <- as.numeric(names(overlap.lengths)[which.max(overlap.lengths)[[1]]])
       mapped <- .find_col_loc(gpl.df, entrez.col, "[0-9]+", check.overlap=TRUE,
-                              .load_ref(org.name, "entrezids", ref_dir))
+                              .load_ref(org.name, "entrezids", ref_dir)$entrezgene_id)
       print(sprintf("parsed %s from entrez", gpl.name))
       return(dplyr::rename(mapped, gene=gene_col))
     }
