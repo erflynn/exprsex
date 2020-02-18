@@ -131,7 +131,7 @@
 
   entrez_df <- dat.map %>% dplyr::filter(!is.na(entrezgene_id)) %>%
     dplyr::select(entrezgene_id) %>% unique()
-  return(entrez_df)
+  return(entrez_df$entrezgene_id)
 }
 
 #' Extract a gene mapping table from biomaRt, this contains ensembl, refseq, entrez ids
