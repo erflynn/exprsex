@@ -24,7 +24,7 @@ trainProba <- function(fit=NULL, df, labels){
   pred_df <- .predDf(fit, df)
   pred_df$true_sex <- labels
   lm.fit <- glm(true_sex ~ diff_score, data=pred_df, family="binomial")
-  return(list("lm.fit"=lm.fit, "fit"="fit"))
+  return(list("lm.fit"=lm.fit, "fit"=fit))
 }
 
 #' Return the predicted probabilities and sex labels for an expression matrix.
